@@ -1,4 +1,4 @@
-==Example usage==
+####Example usage
 
 1. First download the necessery data on ```../data``` folder. Just use command:
 

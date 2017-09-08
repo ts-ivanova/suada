@@ -5,7 +5,6 @@ from dateutil import parser
 import datetime
 
 #from netCDF4 import Dataset as netcdf
-from Scientific.IO.NetCDF import *
 
 def listfiles(basedir, prefix):
   files = []

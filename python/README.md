@@ -13,14 +13,14 @@ if you run this command on Physon cluster please instead use:
 curl -XGET "http://10.1.1.220/meteo/wrfout_d02_2017-08-29_18:00:00" -O wrfout_d02_2017-08-29_18:00:00
 ```
 
-2. You need foollowing additional modules installed on python environment:
+2. You need few additional modules installed on python environment:
 
 * netCDF4
 * tzlocal
 * python-dateutil
 * mysql-python
 
-You cna install them using ```pip``` with following commands:
+Installation can be completed using ```pip``` with following commands:
 
 ```
 pip install netCDF4
@@ -29,7 +29,7 @@ pip install python-dateutil
 pip install mysql-python
 ```
 
-In case you run the scripts on Physon cluster simply load the module ```python/2.7.13```
+In case you run the scripts on Physon cluster simply load the module ```python/2.7.13```, which has all installed python modules already
 
 ```
 module load python/2.7.13

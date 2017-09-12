@@ -1,6 +1,6 @@
 #### Example usage
 
-1. First download the necessery data on ```../data``` folder. Just use command:
+1. First download the necessery data in ```../data``` folder. Just use command:
 
 
 ```
@@ -13,7 +13,7 @@ if you run this command on Physon cluster please instead use:
 curl -XGET "http://10.1.1.220/meteo/wrfout_d02_2017-08-29_18:00:00" -O wrfout_d02_2017-08-29_18:00:00
 ```
 
-2. You need foollowing additional modules installed on python envrionment:
+2. You need foollowing additional modules installed on python environment:
 
 * netCDF4
 * tzlocal

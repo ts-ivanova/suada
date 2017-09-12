@@ -18,6 +18,7 @@ curl -XGET "http://10.1.1.220/meteo/wrfout_d02_2017-08-29_18:00:00" -O wrfout_d0
 * netCDF4
 * tzlocal
 * python-dateutil
+* mysql-python
 
 You cna install them using ```pip``` with following commands:
 
@@ -25,6 +26,7 @@ You cna install them using ```pip``` with following commands:
 pip install netCDF4
 pip install tzlocal
 pip install python-dateutil
+pip install mysql-python
 ```
 
 In case you run the scripts on Physon cluster simply load the module ```python/2.7.13```

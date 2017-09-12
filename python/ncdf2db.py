@@ -4,7 +4,7 @@ from tzlocal import get_localzone
 from dateutil import parser
 import datetime
 
-#from netCDF4 import Dataset as netcdf
+from netCDF4 import Dataset as netcdf
 
 def listfiles(basedir, prefix):
   files = []
@@ -48,11 +48,13 @@ def main(argv):
     field2D = []
     print 'Processing: ', file
 
-#    ncfile = netcdf(file)
-#    strDateTime = ncfile.variables['Times'][0].tostring().replace('_', ' ')
-#    local_tz = get_localzone()
-#    date = parser.parse(strDateTime)
-#    strDateTimeLocal = local_tz.localize(date);
+    ncfile = netcdf(file)
+    strDateTime = ncfile.variables['Times'][0].tostring().replace('_', ' ')
+    local_tz = get_localzone()
+    date = parser.parse(strDateTime)
+    strDateTimeLocal = local_tz.localize(date)
+    #print the timestamp
+	print('Dataset timestamp: {}'.format(strDateTimeLocal))
 
   if not(len(flist)):
     print 'No candidates for impot files found ...'

@@ -4,10 +4,36 @@
 
 
 ```
-curl -XGET "http://suada.phys.uni-sofia.bg/meteo/wrfout_d02_2017-08-29_18:00:00" -o wrfout_d02_2017-08-29_18:00:00
+curl -XGET "http://suada.phys.uni-sofia.bg/meteo/wrfout_d02_2017-08-29_18:00:00" -O wrfout_d02_2017-08-29_18:00:00
 ```
 
-2. Then run ```ncdf2db.py``` script on data folder for T2 meteo field
+if you run this command on Physon cluster please instead use:
+
+```
+curl -XGET "http://10.1.1.220/meteo/wrfout_d02_2017-08-29_18:00:00" -O wrfout_d02_2017-08-29_18:00:00
+```
+
+2. You need foollowing additional modules installed on python envrionment:
+
+* netCDF4
+* tzlocal
+* python-dateutil
+
+You cna install them using ```pip``` with following commands:
+
+```
+pip install netCDF4
+pip install tzlocal
+pip install python-dateutil
+```
+
+In case you run the scripts on Physon cluster simply load the module ```python/2.7.13```
+
+```
+module load python/2.7.13
+```
+
+3. Then run ```ncdf2db.py``` script on data folder for T2 meteo field
 
 
 ```

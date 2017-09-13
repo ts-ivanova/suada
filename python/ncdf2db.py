@@ -3,8 +3,9 @@ import glob
 from tzlocal import get_localzone
 from dateutil import parser
 import datetime
-
 from netCDF4 import Dataset as netcdf
+import MySQLdb
+import databaseconfig as cfg
 
 def listfiles(basedir, prefix):
   files = []
@@ -37,13 +38,19 @@ def main(argv):
     elif opt in ("-p", "--prefix"):
       prefix = arg
 
-
+  #Check wheter [field] is supplied
   if (field == None):
     print "2D field is not supplied."
     sys.exit(1)
 
+  #Retrieve the list of all data files
+  #starting with [prefix] inside [basedir] folder
   flist = listfiles(basedir, prefix)
 
+  #Create DB connection
+  print('DB -> {}'.format(cfg.dev['db']))
+
+  #Iterate over list of all data files
   for file in flist:
     field2D = []
     print 'Processing: ', file
@@ -53,8 +60,8 @@ def main(argv):
     local_tz = get_localzone()
     date = parser.parse(strDateTime)
     strDateTimeLocal = local_tz.localize(date)
-    #print the timestamp
-	print('Dataset timestamp: {}'.format(strDateTimeLocal))
+    #Print the timestamp
+    print('Dataset timestamp: {}'.format(strDateTimeLocal))
 
   if not(len(flist)):
     print 'No candidates for impot files found ...'

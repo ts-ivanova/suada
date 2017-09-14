@@ -49,6 +49,15 @@ def main(argv):
 
   #Create DB connection
   print('DB -> {}'.format(cfg.dev['db']))
+  #create DB connection
+  db = None
+  cur = None
+  try:
+    db = MySQLdb.connect(host=cfg.dev['host'], user=cfg.dev['user'], passwd=cfg.dev['passwd'], db=cfg.dev['db'])
+    cur = db.cursor()
+  except Exception as e:
+    print('Failed to establish connection: {0}'.format(e))
+    sys.exit(1)
 
   #Iterate over list of all data files
   for file in flist:

@@ -6,6 +6,7 @@ import datetime
 from netCDF4 import Dataset as netcdf
 import MySQLdb
 import databaseconfig as cfg
+import math
 
 def listfiles(basedir, prefix):
   files = []
@@ -79,15 +80,28 @@ def main(argv):
     south_north = len(xlong)
     west_east = len(xlong[0])
 
-    print('dump: {0} x {1}'.format(len(xlong), len(xlong[0])))
-    print('xlat:  ({0})'.format(xlat[0][0]))
-    print('T2:    ({0})'.format(T2[0][0]))
-    print('xlong: ({0})'.format(xlong[0][0]))
+    #print('dump: {0} x {1}'.format(len(xlong), len(xlong[0])))
+    #print('xlat:  ({0})'.format(xlat[0][0]))
+    #print('T2:    ({0})'.format(T2[0][0]))
+    #print('xlong: ({0})'.format(xlong[0][0]))
 
-    print('xlat:  ({0})'.format(xlat[0][1]))
-    print('T2:    ({0})'.format(T2[0][1]))
-    print('xlong: ({0})'.format(xlong[0][1]))
-
+    #print('xlat:  ({0})'.format(xlat[0][1]))
+    #print('T2:    ({0})'.format(T2[0][1]))
+    #print('xlong: ({0})'.format(xlong[0][1]))
+    #x0 =
+    #y0 =
+    rmin = math.sqrt(x0-(xlong[0][0])**2+(y0-xlat[0][0])**2)
+    i0=0
+    j0=0
+    for i in range(0, south_north - 1):
+      for j in range(0, west_east - 1):
+        x = xlong[i][j]
+        y = xlat[i][j]
+        r = math.sqrt((x0-x)*(x0-x)+(y0-y)**2)
+        if (r < rmin):
+          r = rmin
+          i0 = i
+          j0 = j
   if not(len(flist)):
     print 'No candidates for impot files found ...'
     sys.exit(1)

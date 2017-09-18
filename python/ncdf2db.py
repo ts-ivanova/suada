@@ -53,8 +53,9 @@ def main(argv):
   db = None
   cur = None
   try:
-    db = MySQLdb.connect(host=cfg.dev['host'], user=cfg.dev['user'], passwd=cfg.dev['passwd'], db=cfg.dev['db'])
-    cur = db.cursor()
+#    db = MySQLdb.connect(host=cfg.dev['host'], user=cfg.dev['user'], passwd=cfg.dev['passwd'], db=cfg.dev['db'])
+#    cur = db.cursor()
+    pass
   except Exception as e:
     print('Failed to establish connection: {0}'.format(e))
     sys.exit(1)
@@ -71,6 +72,21 @@ def main(argv):
     strDateTimeLocal = local_tz.localize(date)
     #Print the timestamp
     print('Dataset timestamp: {}'.format(strDateTimeLocal))
+    xlong = ncfile.variables['XLONG'][0]
+    xlat = ncfile.variables['XLAT'][0]
+    T2 = ncfile.variables['T2'][0]
+
+    south_north = len(xlong)
+    west_east = len(xlong[0])
+
+    print('dump: {0} x {1}'.format(len(xlong), len(xlong[0])))
+    print('xlat:  ({0})'.format(xlat[0][0]))
+    print('T2:    ({0})'.format(T2[0][0]))
+    print('xlong: ({0})'.format(xlong[0][0]))
+
+    print('xlat:  ({0})'.format(xlat[0][1]))
+    print('T2:    ({0})'.format(T2[0][1]))
+    print('xlong: ({0})'.format(xlong[0][1]))
 
   if not(len(flist)):
     print 'No candidates for impot files found ...'
@@ -78,4 +94,3 @@ def main(argv):
 
 if __name__ == "__main__":
    main(sys.argv[1:])
-

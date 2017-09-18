@@ -99,7 +99,7 @@ def main(argv):
         y = xlat[i][j]
         r = math.sqrt((x0-x)*(x0-x)+(y0-y)**2)
         if (r < rmin):
-          r = rmin
+          rmin = r
           i0 = i
           j0 = j
   if not(len(flist)):

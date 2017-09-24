@@ -88,9 +88,9 @@ def main(argv):
     #print('xlat:  ({0})'.format(xlat[0][1]))
     #print('T2:    ({0})'.format(T2[0][1]))
     #print('xlong: ({0})'.format(xlong[0][1]))
-    #x0 =
-    #y0 =
-    rmin = math.sqrt(x0-(xlong[0][0])**2+(y0-xlat[0][0])**2)
+    x0 = 25.1034
+    y0 = 43.0267
+    rmin = math.sqrt((x0-(xlong[0][0]))**2+(y0-xlat[0][0])**2)
     i0=0
     j0=0
     for i in range(0, south_north - 1):
@@ -102,6 +102,11 @@ def main(argv):
           rmin = r
           i0 = i
           j0 = j
+  print 'i0 j0:', i0, j0
+  print 'The closest meteo station should have coordinates x, y:', x, y
+  print 'rmin=', rmin
+  rgab = math.sqrt((43.0267-42.5216)**2 + (25.1034-25.1855)**2)
+  print 'Note: The destination to the meteo station in Gabrovo is rgab=', rgab
   if not(len(flist)):
     print 'No candidates for impot files found ...'
     sys.exit(1)

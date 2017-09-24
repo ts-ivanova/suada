@@ -8,6 +8,20 @@ import MySQLdb
 import databaseconfig as cfg
 import math
 
+def getstations(cur):
+  stations=[]
+  try:
+    cur.execute("select st.ID, st.Name, crd.Longitude, crd.Latitude from COORDINATE as crd left join STATION as st ON crd.StationID = st.ID where crd.InstrumentID = 1;")
+
+    rows =  cur.fetchall()
+    if len(rows):
+	  for row in rows:
+	    stations.append({'id':row[0], 'name':row[1], 'latt':row[2], 'long':row[3]})
+  except Exception as e:
+    print('Error at getstations: {}'.format(e))
+
+  return stations
+
 def listfiles(basedir, prefix):
   files = []
   try:

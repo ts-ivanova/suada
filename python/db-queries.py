@@ -15,13 +15,13 @@ except Exception as e:
   print('Failed to establish connection: {0}'.format(e))
   sys.exit(1)
 
-cur.execute("select st.ID, st.Name, crd.Longitude, crd.Latitude from COORDINATE as crd left join STATION as st ON crd.StationID = st.ID where crd.InstrumentID = 1;")
+cur.execute("select st.ID, st.Name, crd.Longitude, crd.Latitude, crd.Altitude from COORDINATE as crd left join STATION as st ON crd.StationID = st.ID where crd.InstrumentID = 1 and st.Country = 'BG';")
 
 stations = []
 rows =  cur.fetchall()
 if len(rows):
   for row in rows:
-	stations.append({'id':row[0], 'name':row[1], 'latt':row[2], 'long':row[3]})
+	stations.append({'id':row[0], 'name':row[1], 'long':row[2], 'latt':row[3], 'alt':row[4]})
 
 for station in stations:
-  print('{0}: {1}, {2}'.format(station['name'], station['latt'], station['long']))
+  print('Station name: {0}: Long: {1}, Latt: {2}, Alti: {3}'.format(station['name'], station['long'], station['latt'], station['alt']))

@@ -11,12 +11,12 @@ import math
 def getstations(cur):
   stations=[]
   try:
-    cur.execute("select st.ID, st.Name, crd.Longitude, crd.Latitude from COORDINATE as crd left join STATION as st ON crd.StationID = st.ID where crd.InstrumentID = 1;")
+    cur.execute("select st.ID, st.Name, crd.Longitude, crd.Latitude, crd.Altitude from COORDINATE as crd left join STATION as st ON crd.StationID = st.ID where crd.InstrumentID = 1 and st.Country = 'BG';")
 
     rows =  cur.fetchall()
     if len(rows):
 	  for row in rows:
-	    stations.append({'id':row[0], 'name':row[1], 'latt':row[2], 'long':row[3]})
+	    stations.append({'id':row[0], 'name':row[1], 'long':row[2], 'latt':row[3], 'alt':row[4]})
   except Exception as e:
     print('Error at getstations: {}'.format(e))
 
@@ -63,18 +63,21 @@ def main(argv):
   flist = listfiles(basedir, prefix)
 
   #Create DB connection
-  print('DB -> {}'.format(cfg.dev['db']))
+  print('DB -> {}'.format(cfg.prod['db']))
   #create DB connection
   db = None
   cur = None
   try:
-#    db = MySQLdb.connect(host=cfg.dev['host'], user=cfg.dev['user'], passwd=cfg.dev['passwd'], db=cfg.dev['db'])
-#    cur = db.cursor()
-    pass
+    db = MySQLdb.connect(host=cfg.prod['host'], user=cfg.prod['user'], passwd=cfg.prod['passwd'], db=cfg.prod['db'])
+    cur = db.cursor()
   except Exception as e:
     print('Failed to establish connection: {0}'.format(e))
     sys.exit(1)
 
+  print('Get stations')
+  stations = getstations(cur)
+
+  print('Iterate files')
   #Iterate over list of all data files
   for file in flist:
     field2D = []
@@ -89,8 +92,9 @@ def main(argv):
     print('Dataset timestamp: {}'.format(strDateTimeLocal))
     xlong = ncfile.variables['XLONG'][0]
     xlat = ncfile.variables['XLAT'][0]
+    alt = ncfile.variables['HGT'][0]
     T2 = ncfile.variables['T2'][0]
-
+    
     south_north = len(xlong)
     west_east = len(xlong[0])
 
@@ -102,25 +106,26 @@ def main(argv):
     #print('xlat:  ({0})'.format(xlat[0][1]))
     #print('T2:    ({0})'.format(T2[0][1]))
     #print('xlong: ({0})'.format(xlong[0][1]))
-    x0 = 25.1034
-    y0 = 43.0267
-    rmin = math.sqrt((x0-(xlong[0][0]))**2+(y0-xlat[0][0])**2)
-    i0=0
-    j0=0
-    for i in range(0, south_north - 1):
-      for j in range(0, west_east - 1):
-        x = xlong[i][j]
-        y = xlat[i][j]
-        r = math.sqrt((x0-x)*(x0-x)+(y0-y)**2)
-        if (r < rmin):
-          rmin = r
-          i0 = i
-          j0 = j
-  print 'i0 j0:', i0, j0
-  print 'The closest meteo station should have coordinates x, y:', x, y
-  print 'rmin=', rmin
-  rgab = math.sqrt((43.0267-42.5216)**2 + (25.1034-25.1855)**2)
-  print 'Note: The destination to the meteo station in Gabrovo is rgab=', rgab
+    
+    for station in stations:    
+      x0 = station['long']
+      y0 = station['latt']
+      z0 = station['alt']
+      rmin = math.sqrt((x0-(xlong[0][0]))**2+(y0-xlat[0][0])**2+(z0-alt[0][0])**2)
+      i0=0
+      j0=0
+      for i in range(0, south_north - 1):
+        for j in range(0, west_east - 1):
+          x = xlong[i][j]
+          y = xlat[i][j]
+          z = alt[i][j]
+          r = math.sqrt((x0-x)*(x0-x)+(y0-y)**2+(z0-z)**2)
+          if (r < rmin):
+            rmin = r
+            i0 = i
+            j0 = j
+      print('Name: {0} [{1}, {2}, {3}] -> [{4}, {5}, {6}]'.format(station['name'], x0, y0, z0, xlong[i0][j0], xlat[i0][j0], alt[i0][j0]))
+
   if not(len(flist)):
     print 'No candidates for impot files found ...'
     sys.exit(1)

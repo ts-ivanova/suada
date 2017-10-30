@@ -14,6 +14,7 @@ def getstations(cur):
     cur.execute("select st.ID, st.Name, crd.Longitude, crd.Latitude, crd.Altitude from COORDINATE as crd left join STATION as st ON crd.StationID = st.ID where crd.InstrumentID = 1 and st.Country = 'BG';")
 
     rows =  cur.fetchall()
+
     if len(rows):
 	  for row in rows:
 	    stations.append({'id':row[0], 'name':row[1], 'long':row[2], 'latt':row[3], 'alt':row[4]})
@@ -36,6 +37,10 @@ def main(argv):
   basedir='./'
   prefix='wrfout_d02'
   field = None
+  env = 'dev'
+#ili' def fenv(env):
+#  env='dev'
+
 
   try:
     opts, args = getopt.getopt(argv,"h:b:p:f:",["basedir=","prefix=","field="])
@@ -63,12 +68,12 @@ def main(argv):
   flist = listfiles(basedir, prefix)
 
   #Create DB connection
-  print('DB -> {}'.format(cfg.prod['db']))
+  print('DB -> {}'.format(cfg.dev['db']))
   #create DB connection
   db = None
   cur = None
   try:
-    db = MySQLdb.connect(host=cfg.prod['host'], user=cfg.prod['user'], passwd=cfg.prod['passwd'], db=cfg.prod['db'])
+    db = MySQLdb.connect(host=cfg.dev['host'], user=cfg.dev['user'], passwd=cfg.dev['passwd'], db=cfg.dev['db'])
     cur = db.cursor()
   except Exception as e:
     print('Failed to establish connection: {0}'.format(e))
@@ -94,9 +99,24 @@ def main(argv):
     xlat = ncfile.variables['XLAT'][0]
     alt = ncfile.variables['HGT'][0]
     T2 = ncfile.variables['T2'][0]
-    
+
+    Pressure = ncfile.variables['PSFC'][0]
+    PBLH = ncfile.variables['PBLH'][0]
+    HGT = ncfile.variables['HGT'][0]
+    RAINNC = ncfile.variables['RAINNC'][0]
+    SNOWNC = ncfile.variables['SNOWNC'][0]
+    GRAUPELNC = ncfile.variables['GRAUPELNC'][0]
+    HAILNC = ncfile.variables['HAILNC'][0]
+    Precipitation = RAINNC + SNOWNC + GRAUPELNC + HAILNC
     south_north = len(xlong)
     west_east = len(xlong[0])
+    #ZTD = ncfile.variables['ZTD'][0]
+    #ZWD = ncfile.variables['ZWD'][0]
+    #ZHD = ZTD - ZWD
+
+
+
+
 
     #print('dump: {0} x {1}'.format(len(xlong), len(xlong[0])))
     #print('xlat:  ({0})'.format(xlat[0][0]))
@@ -106,8 +126,9 @@ def main(argv):
     #print('xlat:  ({0})'.format(xlat[0][1]))
     #print('T2:    ({0})'.format(T2[0][1]))
     #print('xlong: ({0})'.format(xlong[0][1]))
-    
-    for station in stations:    
+    #print(Precipitation, 'precip')
+
+    for station in stations:
       x0 = station['long']
       y0 = station['latt']
       z0 = station['alt']
@@ -120,11 +141,19 @@ def main(argv):
           y = xlat[i][j]
           z = alt[i][j]
           r = math.sqrt((x0-x)*(x0-x)+(y0-y)**2+(z0-z)**2)
+
           if (r < rmin):
             rmin = r
             i0 = i
             j0 = j
-      print('Name: {0} [{1}, {2}, {3}] -> [{4}, {5}, {6}]'.format(station['name'], x0, y0, z0, xlong[i0][j0], xlat[i0][j0], alt[i0][j0]))
+      press = Pressure[i][j]
+      heigth = HGT[i][j]
+      zhd = (0.0022768*(float(press)))/(1-0.00266*math.cos(2*(float(z0))*(3.1416/180))-(0.00028*(float(heigth))/1000))
+      pblh = PBLH[i][j]
+      temp = T2[i][j]
+      rain = Precipitation[i][j] 
+      print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [K]: {4}, Pressure [Pa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '.format(station['name'], xlong[i0][j0], xlat[i0][j0], alt[i0][j0], temp, press, rain, pblh, zhd))
+      break
 
   if not(len(flist)):
     print 'No candidates for impot files found ...'

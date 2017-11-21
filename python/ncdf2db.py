@@ -99,7 +99,6 @@ def main(argv):
     xlat = ncfile.variables['XLAT'][0]
     alt = ncfile.variables['HGT'][0]
     T2 = ncfile.variables['T2'][0]
-
     Pressure = ncfile.variables['PSFC'][0]
     PBLH = ncfile.variables['PBLH'][0]
     HGT = ncfile.variables['HGT'][0]
@@ -114,10 +113,6 @@ def main(argv):
     #ZWD = ncfile.variables['ZWD'][0]
     #ZHD = ZTD - ZWD
 
-
-
-
-
     #print('dump: {0} x {1}'.format(len(xlong), len(xlong[0])))
     #print('xlat:  ({0})'.format(xlat[0][0]))
     #print('T2:    ({0})'.format(T2[0][0]))
@@ -128,7 +123,19 @@ def main(argv):
     #print('xlong: ({0})'.format(xlong[0][1]))
     #print(Precipitation, 'precip')
 
-    for station in stations:
+    for station in stations: #21.11
+      cur.execute("select ss.ID from SENSOR ss left join SOURCE src " +\
+              "on src.ID = ss.SourceID left join STATION stn " +\
+              "on stn.ID = ss.StationID where stn.ID = %s and src.ID = %s", [station['id'],71])
+      rows =  cur.fetchall()
+      if len(rows):
+        for row in rows:
+      stationSourceId = row[0]
+        print 'Station: ', stationName, ' ID: ', stationId, ' stationSourceId: ', stationSourceId
+      else:
+        stationSourceId = -1
+        print 'Error occured. I can\'t find stationSourceId for station ', stationName, ' ID: ', stationId
+        break
       x0 = station['long']
       y0 = station['latt']
       z0 = station['alt']
@@ -151,8 +158,21 @@ def main(argv):
       zhd = (0.0022768*(float(press)))/(1-0.00266*math.cos(2*(float(z0))*(3.1416/180))-(0.00028*(float(heigth))/1000))
       pblh = PBLH[i][j]
       temp = T2[i][j]
-      rain = Precipitation[i][j] 
+      rain = Precipitation[i][j]
       print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [K]: {4}, Pressure [Pa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '.format(station['name'], xlong[i0][j0], xlat[i0][j0], alt[i0][j0], temp, press, rain, pblh, zhd))
+#21.11.17
+      cur.execute ( "insert into NWP_IN_1D (Datetime, Temperature, Pressure, Altitude, SensorID, Latitude, Longitude, ZHD, PBL, Precipitation)\
+                     values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) on duplicate key update\
+             Temperature = %s,\
+             Pressure = %s,\
+             Altitude = %s,\
+             Latitude = %s,\
+             Longitude = %s,\
+             ZHD = %s,\
+             PBL = %s,\
+             Precipitation = %s", [date, temp, press, height, stationSourceId, y, x, zhd, pblh, rain, temp, press, height, y, x, zhd, pblh, rain])
+       db.commit()
+
       break
 
   if not(len(flist)):

@@ -130,8 +130,8 @@ def main(argv):
       rows =  cur.fetchall()
       if len(rows):
         for row in rows:
-      stationSourceId = row[0]
-        print 'Station: ', stationName, ' ID: ', stationId, ' stationSourceId: ', stationSourceId
+          stationSourceId = row[0]
+          print 'Station: ', station['name'], ' ID: ', station['id'], ' stationSourceId: ', stationSourceId
       else:
         stationSourceId = -1
         print 'Error occured. I can\'t find stationSourceId for station ', stationName, ' ID: ', stationId
@@ -170,10 +170,10 @@ def main(argv):
              Longitude = %s,\
              ZHD = %s,\
              PBL = %s,\
-             Precipitation = %s", [date, temp, press, height, stationSourceId, y, x, zhd, pblh, rain, temp, press, height, y, x, zhd, pblh, rain])
-       db.commit()
+             Precipitation = %s", [date, temp, press, heigth, stationSourceId, y, x, zhd, pblh, rain, temp, press, heigth, y, x, zhd, pblh, rain])
+      db.commit()
 
-      break
+      #break
 
   if not(len(flist)):
     print 'No candidates for impot files found ...'

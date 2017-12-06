@@ -8,6 +8,7 @@ import MySQLdb
 import databaseconfig as cfg
 import math
 
+#define a function that selects the stations' ID, Name, Longitude, Latitude, Altitude form the COORDINATE table
 def getstations(cur):
   stations=[]
   try:
@@ -23,6 +24,7 @@ def getstations(cur):
 
   return stations
 
+#define a function called listfiles
 def listfiles(basedir, prefix):
   files = []
   try:
@@ -38,8 +40,7 @@ def main(argv):
   prefix='wrfout_d02'
   field = None
   env = 'dev'
-#ili' def fenv(env):
-#  env='dev'
+#possible options are 'dev' and 'prod'
 
 
   try:
@@ -109,21 +110,10 @@ def main(argv):
     Precipitation = RAINNC + SNOWNC + GRAUPELNC + HAILNC
     south_north = len(xlong)
     west_east = len(xlong[0])
-    #ZTD = ncfile.variables['ZTD'][0]
-    #ZWD = ncfile.variables['ZWD'][0]
-    #ZHD = ZTD - ZWD
+    #Above are most of the used parameters
 
-    #print('dump: {0} x {1}'.format(len(xlong), len(xlong[0])))
-    #print('xlat:  ({0})'.format(xlat[0][0]))
-    #print('T2:    ({0})'.format(T2[0][0]))
-    #print('xlong: ({0})'.format(xlong[0][0]))
-
-    #print('xlat:  ({0})'.format(xlat[0][1]))
-    #print('T2:    ({0})'.format(T2[0][1]))
-    #print('xlong: ({0})'.format(xlong[0][1]))
-    #print(Precipitation, 'precip')
-
-    for station in stations: #21.11
+    #21.11.2017
+    for station in stations:
       cur.execute("select ss.ID from SENSOR ss left join SOURCE src " +\
               "on src.ID = ss.SourceID left join STATION stn " +\
               "on stn.ID = ss.StationID where stn.ID = %s and src.ID = %s", [station['id'],71])
@@ -147,12 +137,14 @@ def main(argv):
           x = xlong[i][j]
           y = xlat[i][j]
           z = alt[i][j]
+          #calculate the distance to the closest meteostation
           r = math.sqrt((x0-x)*(x0-x)+(y0-y)**2+(z0-z)**2)
 
           if (r < rmin):
             rmin = r
             i0 = i
             j0 = j
+
       press = Pressure[i][j]
       heigth = HGT[i][j]
       zhd = (0.0022768*(float(press)))/(1-0.00266*math.cos(2*(float(z0))*(3.1416/180))-(0.00028*(float(heigth))/1000))
@@ -160,7 +152,10 @@ def main(argv):
       temp = T2[i][j]
       rain = Precipitation[i][j]
       print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [K]: {4}, Pressure [Pa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '.format(station['name'], xlong[i0][j0], xlat[i0][j0], alt[i0][j0], temp, press, rain, pblh, zhd))
-#21.11.17
+
+      #21.11.17
+      #SQL commands that insert values of parameters in the 1D table.
+      #If there is a dublicate, the existing fileds are updated.
       cur.execute ( "insert into NWP_IN_1D (Datetime, Temperature, Pressure, Altitude, SensorID, Latitude, Longitude, ZHD, PBL, Precipitation)\
                      values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) on duplicate key update\
              Temperature = %s,\
@@ -178,6 +173,11 @@ def main(argv):
   if not(len(flist)):
     print 'No candidates for impot files found ...'
     sys.exit(1)
+
+  #For 3D: file is wrfpy.py
+
+
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])

@@ -111,8 +111,21 @@ def main(argv):
     south_north = len(xlong)
     west_east = len(xlong[0])
     #Above are most of the used parameters
-
+    #3D fields, 3.1.18
+    T = ncfile.variables['T'][0]
+    P = ncfile.variables['P'][0]
+    PB = ncfile.variables['PB'][0]
+    PHB = ncfile.variables['PHB'][0]
+    PH = ncfile.variables['PH'][0]
+    QVAPOR = ncfile.variables['QVAPOR'][0]
+    bottom_top = len(T)
+    print('bottom_top = {}'.format(bottom_top))
     #21.11.2017
+    #3.1.2018
+    Rd          = 287.0
+    Cp          = 7.0*Rd / 2.0
+    Rd_Cp       = Rd / Cp
+    #used for 3D calculation of tk
     for station in stations:
       cur.execute("select ss.ID from SENSOR ss left join SOURCE src " +\
               "on src.ID = ss.SourceID left join STATION stn " +\
@@ -167,8 +180,27 @@ def main(argv):
              PBL = %s,\
              Precipitation = %s", [date, temp, press, heigth, stationSourceId, y, x, zhd, pblh, rain, temp, press, heigth, y, x, zhd, pblh, rain])
       db.commit()
+      #3D data insert
+      for k in range(0, bottom_top):
+          theta = T[k][i0][j0] + 300.
+          Pair = P[k][i0][j0] + PB[k][i0][j0] #Press3D = Pair
+          tk  = theta * (( Pair/100000. )**(Rd_Cp))
+          QV = QVAPOR[k][i0][j0]
+          hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
 
+          cur.execute ( "insert into NWP_IN_3D (Datetime, Temperature, Pressure, SensorID, Latitude, Longitude, Height, WV_Mixing_ratio, Level)\
+	                   	values (%s, %s, %s, %s, %s, %s, %s, %s, %s) on duplicate key update\
+				Temperature = %s,\
+				Pressure = %s,\
+			   	Latitude = %s,\
+			   	Longitude = %s,\
+				Height = %s,\
+				WV_Mixing_ratio = %s,\
+				Level = %s", [date, tk, Pair, stationSourceId, y, x, hgth, QV, k, tk, Pair, y, x, hgth, QV, k]) #insert or update
+
+          db.commit()
       #break
+      #QVAPOR is the mixing ratio
 
   if not(len(flist)):
     print 'No candidates for impot files found ...'

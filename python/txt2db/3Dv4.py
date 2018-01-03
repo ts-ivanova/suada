@@ -39,7 +39,7 @@ def main(argv):
       firstLine = content[0]
       words = firstLine.split()
       startTime = words[4]
-      print 'startTime: ',startTime 
+      print 'startTime: ',startTime
       timeStart = datetime.datetime.strptime(startTime, '%Y%m%d%H%M')
       startTime = words[7]
       recordCnt = words[11]
@@ -50,8 +50,8 @@ def main(argv):
 
       stationSourceId = -1
       count1 = 0
-      while (count1 < 44): 
-        count1 = count1 + 1 
+      while (count1 < 44):
+        count1 = count1 + 1
         for index, line in enumerate(content):
           if line.find("Station:") > -1:
             values = line.split()
@@ -72,10 +72,10 @@ def main(argv):
               print 'Error occured. I can\'t find stationSourceId for station ', stationName, ' ID: ', stationId
 	  if (line.find("Temperature (K)") > -1) & (stationSourceId > -1) :
                  data = content[index+count1]
-                 tempmlst = values2db(data,timeStart) 
+                 tempmlst = values2db(data,timeStart)
 	  if (line.find("Water vapor mixing ratio [kg kg-1]") > -1) & (stationSourceId > -1) :
 		 data = content[index+count1]
-		 wvmrlst  = values2db(data,timeStart)  
+		 wvmrlst  = values2db(data,timeStart)
                 # count1 = count1 + 1
 	  if (line.find("Model height [km]") > -1) & (stationSourceId > -1) :
                  data = content[index+count1]
@@ -87,7 +87,7 @@ def main(argv):
 		for i, tup in enumerate(pressure2lst):
 		  tk = float(tempmlst[i][1])
 		  Press3D  = float(pressure2lst[i][1])
-		  height = float(hgtlst[i][1])                  
+		  height = float(hgtlst[i][1])
 		  QVAPOR = float(wvmrlst[i][1])
 		  DateTime = pressure2lst[i][0].strftime('%Y-%m-%d %H:%M:%S')
 		  Level = float(count1)
@@ -99,13 +99,13 @@ def main(argv):
 			   	Longitude = %s,\
 				Height = %s,\
 				WV_Mixing_ratio = %s,\
-				Level = %s", [DateTime, tk, Press3D, stationSourceId, stationLatt, stationLong, height, QVAPOR, Level, tk, Press3D, stationLatt, stationLong, height, QVAPOR, Level])
+				Level = %s", [DateTime, tk, Press3D, stationSourceId, stationLatt, stationLong, height, QVAPOR, Level, tk, Press3D, stationLatt, stationLong, height, QVAPOR, Level]) #insert or update
 		  db.commit()		  
     else:
         print 'Input file seems empty'
         sys.exit(2)
 
-     
+
 
   except IOError:
     print 'File ',inputname,' not found !!!'

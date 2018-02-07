@@ -38,31 +38,24 @@ def listfiles(basedir, prefix):
 def main(argv):
   basedir='./'
   prefix='wrfout_d02'
-  field = None
   env = 'dev'
 #possible options are 'dev' and 'prod'
 
 
   try:
-    opts, args = getopt.getopt(argv,"h:b:p:f:",["basedir=","prefix=","field="])
+    opts, args = getopt.getopt(argv,"h:b:p:",["basedir=","prefix="])
   except getopt.GetoptError:
-    print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -f <field> [None] '
+    print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+']'
     sys.exit(2)
   for opt, arg in opts:
     if opt == '-h':
-      print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -f <field> [None]'
+      print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+']'
       sys.exit()
     elif opt in ("-b", "--basedir"):
       basedir = arg
-    elif opt in ("-f", "--field"):
-      field = arg
     elif opt in ("-p", "--prefix"):
       prefix = arg
 
-  #Check wheter [field] is supplied
-  if (field == None):
-    print "2D field is not supplied."
-    sys.exit(1)
 
   #Retrieve the list of all data files
   #starting with [prefix] inside [basedir] folder

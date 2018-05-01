@@ -8,6 +8,8 @@ import MySQLdb
 import databaseconfig as cfg
 import math
 
+#Aim of python scripts in this project: to export the model data stored in netCDF format to a SUADA database.
+
 #define a function that selects the stations' ID, Name, Longitude, Latitude, Altitude form the COORDINATE table
 def getstations(cur):
   stations=[]
@@ -104,7 +106,7 @@ def main(argv):
     south_north = len(xlong)
     west_east = len(xlong[0])
     #Above are most of the used parameters
-    #3D fields, 3.1.18
+    #3D fields
     T = ncfile.variables['T'][0]
     P = ncfile.variables['P'][0]
     PB = ncfile.variables['PB'][0]
@@ -113,12 +115,12 @@ def main(argv):
     QVAPOR = ncfile.variables['QVAPOR'][0]
     bottom_top = len(T)
     print('bottom_top = {}'.format(bottom_top))
-    #21.11.2017
-    #3.1.2018
+
     Rd          = 287.0
     Cp          = 7.0*Rd / 2.0
     Rd_Cp       = Rd / Cp
     #used for 3D calculation of tk
+
     for station in stations:
       cur.execute("select ss.ID from SENSOR ss left join SOURCE src " +\
               "on src.ID = ss.SourceID left join STATION stn " +\
@@ -154,12 +156,12 @@ def main(argv):
       press = Pressure[i][j]
       heigth = HGT[i][j]
       zhd = (0.0022768*(float(press)))/(1-0.00266*math.cos(2*(float(z0))*(3.1416/180))-(0.00028*(float(heigth))/1000))
+      #zhd = zenith hydrostatic delay
       pblh = PBLH[i][j]
       temp = T2[i][j]
       rain = Precipitation[i][j]
       print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [K]: {4}, Pressure [Pa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '.format(station['name'], xlong[i0][j0], xlat[i0][j0], alt[i0][j0], temp, press, rain, pblh, zhd))
 
-      #21.11.17
       #SQL commands that insert values of parameters in the 1D table.
       #If there is a dublicate, the existing fileds are updated.
       cur.execute ( "insert into NWP_IN_1D (Datetime, Temperature, Pressure, Altitude, SensorID, Latitude, Longitude, ZHD, PBL, Precipitation)\

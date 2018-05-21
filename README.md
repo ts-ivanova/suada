@@ -10,3 +10,10 @@ Meteorology method.
 
 
 http://physon.phys.uni-sofia.bg/
+
+
+There are Instructions for working on Physon and with SUADA to which only people included in a mail list have access.
+If you would like to request access, follow this link:
+
+https://docs.google.com/document/d/1Q1ZGkERt_7ucqpM14zuhdyHrdTNpGi1SadkiNT8zkKo/edit?usp=sharing
+

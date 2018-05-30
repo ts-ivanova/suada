@@ -8,9 +8,9 @@ import MySQLdb
 import databaseconfig as cfg
 import math
 
-#Aim of python scripts in this project: to export the model data stored in netCDF format to a SUADA database.
+# Aim of python scripts in this project: to export the model data stored in netCDF format to a SUADA database.
 
-#define a function that selects the stations' ID, Name, Longitude, Latitude, Altitude form the COORDINATE table
+# Define a function that selects the stations' ID, Name, Longitude, Latitude, Altitude form the COORDINATE table:
 def getstations(cur):
   stations=[]
   try:
@@ -26,7 +26,7 @@ def getstations(cur):
 
   return stations
 
-#define a function called listfiles
+# Define a function called listfiles:
 def listfiles(basedir, prefix):
   files = []
   try:
@@ -36,12 +36,28 @@ def listfiles(basedir, prefix):
     print('Exception reading basefolder {} {}'.format(basedir,e))
   return files
 
+# Define the following procedure that takes source_name as an argument and returns
+# source_id as a result, which is later used when inserting into 1D and 3D databases.
+def get_source_id(cur):
+  cur.execute("SELECT ID FROM SOURCE WHERE Name = source_name", source_id) # source_id or source_name at the end ???
+  print 'SourceID: ', SOURCE['ID'], ' Name: ', SOURCE['Name']
+  rows = cor.fetchall()
+  if len(rows):
+    for row in rows:
+      source_id = row[0]
+  print 'SourceID:', source_id, 'Source name: ', source_name
+#     Check if there exists a source_id corresponding to the source_name that the user provided:
+#     else:
+#     source_name = ... ?
+#     print 'Error: Not an existing source!'
+#     break
 
+# Define the main procedure:
 def main(argv):
   basedir='./'
   prefix='wrfout_d02'
-  env = 'dev' #possible options are 'dev' and 'prod'
-  source_name = 'None'
+  env = 'dev' # possible options are 'dev' and 'prod'
+  source_name = None
 
   try:
     opts, args = getopt.getopt(argv,"h:b:p:s:",["basedir=","prefix=","source_name="])
@@ -59,18 +75,18 @@ def main(argv):
     elif opt in ("-s", "--source_name"):
       source_name = arg
 
-  #Check whether the user has specified source name. If not -> Error.
+  # Check whether the user has specified source name. If not -> Error.
   if source_name == 'None':
     print 'Error: You must specify the source name! (-s <source_name>)'
     sys.exit()
 
-  #Retrieve the list of all data files
-  #starting with [prefix] inside [basedir] folder
+  # Retrieve the list of all data files
+  # starting with [prefix] inside [basedir] folder
   flist = listfiles(basedir, prefix)
 
-  #Create DB connection
+  # Create DB connection
   print('DB -> {}'.format(cfg.dev['db']))
-  #create DB connection
+  # create DB connection
   db = None
   cur = None
   try:
@@ -84,7 +100,7 @@ def main(argv):
   stations = getstations(cur)
 
   print('Iterate files')
-  #Iterate over list of all data files
+  # Iterate over list of all data files
   for file in flist:
     field2D = []
     print 'Processing: ', file
@@ -94,7 +110,7 @@ def main(argv):
     local_tz = get_localzone()
     date = parser.parse(strDateTime)
     strDateTimeLocal = local_tz.localize(date)
-    #Print the timestamp
+    # Print the timestamp
     print('Dataset timestamp: {}'.format(strDateTimeLocal))
     xlong = ncfile.variables['XLONG'][0]
     xlat = ncfile.variables['XLAT'][0]
@@ -110,8 +126,8 @@ def main(argv):
     Precipitation = RAINNC + SNOWNC + GRAUPELNC + HAILNC
     south_north = len(xlong)
     west_east = len(xlong[0])
-    #Above are most of the used parameters
-    #3D fields
+    # Above are most of the used parameters
+    # 3D fields
     T = ncfile.variables['T'][0]
     P = ncfile.variables['P'][0]
     PB = ncfile.variables['PB'][0]
@@ -124,24 +140,8 @@ def main(argv):
     Rd          = 287.0
     Cp          = 7.0*Rd / 2.0
     Rd_Cp       = Rd / Cp
-    #used for 3D calculation of tk
+    # used for 3D calculation of tk
 
-    #The following few lines perform a procedure that takes source_name as an argument and returns source_id as a result, which is later used when inserting into 1D and 3D databases.
-    def get_source_id(source_name, source_id):
-      cur.execute("SELECT ID FROM SOURCE WHERE Name = source_name", source_id) #source_id or source_name at the end ???
-    
-      print 'SourceID: ', SOURCE['ID'], ' Name: ', SOURCE['Name']
-      rows = cor.fetchall()
-      if len(rows):
-        for row in rows:
-          source_id = row[0]
-      print 'SourceID:', source_id, 'Source name: ', source_name
-    #    Check if there exists a source_id corresponding to the source_name that the user provided:
-    #    else:
-    #    source_name = ... ?
-    #    print 'Error: Not an existing source!'
-    #    break
-    
     for station in stations:
       cur.execute("select ss.ID from SENSOR ss left join SOURCE src " +\
               "on src.ID = ss.SourceID left join STATION stn " +\
@@ -166,7 +166,7 @@ def main(argv):
           x = xlong[i][j]
           y = xlat[i][j]
           z = alt[i][j]
-          #calculate the distance to the closest meteostation
+          # calculate the distance to the closest meteostation
           r = math.sqrt((x0-x)*(x0-x)+(y0-y)**2+(z0-z)**2)
 
           if (r < rmin):
@@ -177,14 +177,14 @@ def main(argv):
       press = Pressure[i][j]
       heigth = HGT[i][j]
       zhd = (0.0022768*(float(press)))/(1-0.00266*math.cos(2*(float(z0))*(3.1416/180))-(0.00028*(float(heigth))/1000))
-      #zhd = zenith hydrostatic delay
+      # zhd = zenith hydrostatic delay
       pblh = PBLH[i][j]
       temp = T2[i][j]
       rain = Precipitation[i][j]
       print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [K]: {4}, Pressure [Pa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '.format(station['name'], xlong[i0][j0], xlat[i0][j0], alt[i0][j0], temp, press, rain, pblh, zhd))
 
-      #SQL commands that insert values of parameters in the 1D table.
-      #If there is a dublicate, the existing fileds are updated.
+      # SQL commands that insert values of parameters in the 1D table.
+      # If there is a dublicate, the existing fileds are updated.
       cur.execute ( "insert into NWP_IN_1D (Datetime, Temperature, Pressure, Altitude, SensorID, Latitude, Longitude, ZHD, PBL, Precipitation)\
                      values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) on duplicate key update\
              Temperature = %s,\
@@ -195,11 +195,11 @@ def main(argv):
              ZHD = %s,\
              PBL = %s,\
              Precipitation = %s", [date, temp, press, heigth, stationSourceId, y, x, zhd, pblh, rain, temp, press, heigth, y, x, zhd, pblh, rain])
-      #db.commit()
-      #3D data insert
+      # db.commit()
+      # 3D data insert
       for k in range(0, bottom_top):
           theta = T[k][i0][j0] + 300.
-          Pair = P[k][i0][j0] + PB[k][i0][j0] #Press3D = Pair
+          Pair = P[k][i0][j0] + PB[k][i0][j0] # Press3D = Pair
           tk  = theta * (( Pair/100000. )**(Rd_Cp))
           QV = QVAPOR[k][i0][j0]
           hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
@@ -212,11 +212,11 @@ def main(argv):
 			   	Longitude = %s,\
 				Height = %s,\
 				WV_Mixing_ratio = %s,\
-				Level = %s", [date, tk, Pair, stationSourceId, y, x, hgth, QV, k, tk, Pair, y, x, hgth, QV, k]) #insert or update
+				Level = %s", [date, tk, Pair, stationSourceId, y, x, hgth, QV, k, tk, Pair, y, x, hgth, QV, k]) # insert or update
 
       db.commit()
-      #break
-      #QVAPOR is the mixing ratio
+      # break
+      # QVAPOR is the mixing ratio
 
   if not(len(flist)):
     print 'No candidates for impot files found ...'

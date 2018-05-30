@@ -76,7 +76,7 @@ def main(argv):
       source_name = arg
 
   # Check whether the user has specified source name. If not -> Error.
-  if source_name == 'None':
+  if source_name == None:
     print 'Error: You must specify the source name! (-s <source_name>)'
     sys.exit()
 
@@ -195,7 +195,7 @@ def main(argv):
              ZHD = %s,\
              PBL = %s,\
              Precipitation = %s", [date, temp, press, heigth, stationSourceId, y, x, zhd, pblh, rain, temp, press, heigth, y, x, zhd, pblh, rain])
-      # db.commit()
+      #db.commit()
       # 3D data insert
       for k in range(0, bottom_top):
           theta = T[k][i0][j0] + 300.

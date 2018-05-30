@@ -40,24 +40,29 @@ def listfiles(basedir, prefix):
 def main(argv):
   basedir='./'
   prefix='wrfout_d02'
-  env = 'dev'
-#possible options are 'dev' and 'prod'
-
+  env = 'dev' #possible options are 'dev' and 'prod'
+  source_name = 'None'
 
   try:
-    opts, args = getopt.getopt(argv,"h:b:p:",["basedir=","prefix="])
+    opts, args = getopt.getopt(argv,"h:b:p:s:",["basedir=","prefix=","source_name="])
   except getopt.GetoptError:
-    print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+']'
+    print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+source_name+']'
     sys.exit(2)
   for opt, arg in opts:
     if opt == '-h':
-      print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+']'
+      print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+source_name+']'
       sys.exit()
     elif opt in ("-b", "--basedir"):
       basedir = arg
     elif opt in ("-p", "--prefix"):
       prefix = arg
+    elif opt in ("-s", "--source_name"):
+      source_name = arg
 
+  #Check whether the user has specified source name. If not -> Error.
+  if source_name == 'None':
+    print 'Error: You must specify the source name! (-s <source_name>)'
+    sys.exit()
 
   #Retrieve the list of all data files
   #starting with [prefix] inside [basedir] folder
@@ -120,6 +125,22 @@ def main(argv):
     Cp          = 7.0*Rd / 2.0
     Rd_Cp       = Rd / Cp
     #used for 3D calculation of tk
+
+    #The following few lines perform a procedure that takes source_name as an argument and returns source_id as a result, which is later used when inserting into 1D and 3D databases.
+    def get_source_id(source_name, source_id):
+      cur.execute("SELECT ID FROM SOURCE WHERE Name = source_name", source_id) #source_id or source_name at the end ???
+      
+      print 'SourceID: ', SOURCE['ID'], ' Name: ', SOURCE['Name']
+      rows = cor.fetchall()
+      if len(rows):
+        for row in rows:
+          source_id = row[0]
+          print 'SourceID:', source_id, 'Source name: ', source_name
+    #  else:  # Check if there exists a source_id corresponding to the source_name that the user provided:
+    #    # ........
+    #    source_name = -1
+    #    print 'Error: Not an existing source!'
+    #    break
 
     for station in stations:
       cur.execute("select ss.ID from SENSOR ss left join SOURCE src " +\

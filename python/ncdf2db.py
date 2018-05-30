@@ -174,7 +174,7 @@ def main(argv):
              ZHD = %s,\
              PBL = %s,\
              Precipitation = %s", [date, temp, press, heigth, stationSourceId, y, x, zhd, pblh, rain, temp, press, heigth, y, x, zhd, pblh, rain])
-      db.commit()
+      #db.commit()
       #3D data insert
       for k in range(0, bottom_top):
           theta = T[k][i0][j0] + 300.
@@ -193,17 +193,13 @@ def main(argv):
 				WV_Mixing_ratio = %s,\
 				Level = %s", [date, tk, Pair, stationSourceId, y, x, hgth, QV, k, tk, Pair, y, x, hgth, QV, k]) #insert or update
 
-          db.commit()
+      db.commit()
       #break
       #QVAPOR is the mixing ratio
 
   if not(len(flist)):
     print 'No candidates for impot files found ...'
     sys.exit(1)
-
-  #For 3D: file is wrfpy.py
-
-
 
 
 if __name__ == "__main__":

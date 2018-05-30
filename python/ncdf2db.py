@@ -129,19 +129,19 @@ def main(argv):
     #The following few lines perform a procedure that takes source_name as an argument and returns source_id as a result, which is later used when inserting into 1D and 3D databases.
     def get_source_id(source_name, source_id):
       cur.execute("SELECT ID FROM SOURCE WHERE Name = source_name", source_id) #source_id or source_name at the end ???
-      
+    
       print 'SourceID: ', SOURCE['ID'], ' Name: ', SOURCE['Name']
       rows = cor.fetchall()
       if len(rows):
         for row in rows:
           source_id = row[0]
-          print 'SourceID:', source_id, 'Source name: ', source_name
-    #  else:  # Check if there exists a source_id corresponding to the source_name that the user provided:
-    #    # ........
-    #    source_name = -1
+      print 'SourceID:', source_id, 'Source name: ', source_name
+    #    Check if there exists a source_id corresponding to the source_name that the user provided:
+    #    else:
+    #    source_name = ... ?
     #    print 'Error: Not an existing source!'
     #    break
-
+    
     for station in stations:
       cur.execute("select ss.ID from SENSOR ss left join SOURCE src " +\
               "on src.ID = ss.SourceID left join STATION stn " +\

@@ -45,27 +45,21 @@ def listfiles(basedir, prefix):
 # Define the following procedure that takes source_name as an argument and returns
 # source_id as a result, which is later used when inserting into 1D and 3D databases.
 def get_source_id(cur, source_name):
-  source = []
+  source_id = -1
   try:
     cur.execute("SELECT ID FROM SOURCE WHERE Name = %s", source_name) # source_id or source_name at the end ???
-    return source_id
-    #print 'SourceID:', source_id, 'Source name: ', source_name
 
     rows = cur.fetchall()
 
     if len(rows):
       for row in rows:
-        source.append({'source_id':row[0]})
+        source_id = row[0]
 
   except Exception as e:
     print('Error at get_source_id: {}'.format(e))
-#     Check if there exists a source_id corresponding to the source_name that the user provided:
-#     else:
-#     source_name = ... ?
-#     print 'Error: Not an existing source!'
-#     break
 
-
+  finally:
+    return source_id
 
 # Define the main procedure:
 def main(argv):
@@ -109,7 +103,15 @@ def main(argv):
     cur = db.cursor()
   except Exception as e:
     print('Failed to establish connection: {0}'.format(e))
+    cur.close()
     sys.exit(1)
+
+
+  print('Try to fetch the source_id ...')
+  source_id = get_source_id(cur, source_name)
+  if source_id < 0:
+    print 'Error: Can not find source_id for source name: {}'.format(source_name)
+    
 
   print('Get stations')
   stations = getstations(cur)
@@ -160,7 +162,7 @@ def main(argv):
     for station in stations:
       cur.execute("select ss.ID from SENSOR ss left join SOURCE src " +\
               "on src.ID = ss.SourceID left join STATION stn " +\
-              "on stn.ID = ss.StationID where stn.ID = %s and src.ID = %s", [station['id'],71])
+              "on stn.ID = ss.StationID where stn.ID = %s and src.ID = %s", [station['id'], source_id])
       rows =  cur.fetchall()
       if len(rows):
         for row in rows:

@@ -55,7 +55,7 @@ def get_source_id(cur, source_name):
 
     if len(rows):
       for row in rows:
-        source.append('source_id':row[0], 'source_name':row[1]
+        source.append({'source_id':row[0]})
 
   except Exception as e:
     print('Error at get_source_id: {}'.format(e))

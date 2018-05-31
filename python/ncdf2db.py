@@ -10,6 +10,8 @@ import math
 
 # Aim of python scripts in this project: to export the model data stored in netCDF format to a SUADA database.
 
+
+
 # Define a function that selects the stations' ID, Name, Longitude, Latitude, Altitude form the COORDINATE table:
 def getstations(cur):
   stations=[]
@@ -26,6 +28,8 @@ def getstations(cur):
 
   return stations
 
+
+
 # Define a function called listfiles:
 def listfiles(basedir, prefix):
   files = []
@@ -36,21 +40,32 @@ def listfiles(basedir, prefix):
     print('Exception reading basefolder {} {}'.format(basedir,e))
   return files
 
+
+
 # Define the following procedure that takes source_name as an argument and returns
 # source_id as a result, which is later used when inserting into 1D and 3D databases.
-def get_source_id(cur):
-  cur.execute("SELECT ID FROM SOURCE WHERE Name = source_name", source_id) # source_id or source_name at the end ???
-  print 'SourceID: ', SOURCE['ID'], ' Name: ', SOURCE['Name']
-  rows = cor.fetchall()
-  if len(rows):
-    for row in rows:
-      source_id = row[0]
-  print 'SourceID:', source_id, 'Source name: ', source_name
+def get_source_id(cur, source_name):
+  source = []
+  try:
+    cur.execute("SELECT ID FROM SOURCE WHERE Name = %s", source_name) # source_id or source_name at the end ???
+    return source_id
+    #print 'SourceID:', source_id, 'Source name: ', source_name
+
+    rows = cur.fetchall()
+
+    if len(rows):
+      for row in rows:
+        source.append('source_id':row[0], 'source_name':row[1]
+
+  except Exception as e:
+    print('Error at get_source_id: {}'.format(e))
 #     Check if there exists a source_id corresponding to the source_name that the user provided:
 #     else:
 #     source_name = ... ?
 #     print 'Error: Not an existing source!'
 #     break
+
+
 
 # Define the main procedure:
 def main(argv):

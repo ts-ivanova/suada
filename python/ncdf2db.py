@@ -164,6 +164,8 @@ def main(argv):
               "on src.ID = ss.SourceID left join STATION stn " +\
               "on stn.ID = ss.StationID where stn.ID = %s and src.ID = %s", [station['id'], source_id])
       rows =  cur.fetchall()
+      stationName = station['name']
+      stationId = station['id']
       if len(rows):
         for row in rows:
           stationSourceId = row[0]
@@ -241,4 +243,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+  main(sys.argv[1:])

@@ -47,7 +47,7 @@ def listfiles(basedir, prefix):
 def get_source_id(cur, source_name):
   source_id = -1
   try:
-    cur.execute("SELECT ID FROM SOURCE WHERE Name = %s", source_name) # source_id or source_name at the end ???
+    cur.execute("SELECT ID FROM SOURCE WHERE Name = %(source_name)s", {'source_name' : source_name}) # source_id or source_name at the end ???
 
     rows = cur.fetchall()
 
@@ -66,23 +66,23 @@ def main(argv):
   basedir='./'
   prefix='wrfout_d02'
   env = 'dev' # possible options are 'dev' and 'prod'
-  source_name = None
+  source_name = ''
 
   try:
     opts, args = getopt.getopt(argv,"h:b:p:s:",["basedir=","prefix=","source_name="])
   except getopt.GetoptError:
-    print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+source_name+']'
+    print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+']'
     sys.exit(2)
   for opt, arg in opts:
     if opt == '-h':
-      print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+source_name+']'
+      print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+']'
       sys.exit()
     elif opt in ("-b", "--basedir"):
       basedir = arg
     elif opt in ("-p", "--prefix"):
       prefix = arg
     elif opt in ("-s", "--source_name"):
-      source_name = arg
+      source_name = str(arg)
 
   # Check whether the user has specified source name. If not -> Error.
   if source_name == None:
@@ -111,7 +111,9 @@ def main(argv):
   source_id = get_source_id(cur, source_name)
   if source_id < 0:
     print 'Error: Can not find source_id for source name: {}'.format(source_name)
-    
+    sys.exit(1)
+ 
+  print('Source id: {} found for source name: {}'.format(source_id, source_name))
 
   print('Get stations')
   stations = getstations(cur)

@@ -13,10 +13,21 @@ import math
 
 
 # Define a function that selects the stations' ID, Name, Longitude, Latitude, Altitude form the COORDINATE table:
-def getstations(cur):
+def getstations(cur, source_name, instrument_name):
   stations=[]
   try:
-    cur.execute("select st.ID, st.Name, crd.Longitude, crd.Latitude, crd.Altitude from COORDINATE as crd left join STATION as st ON crd.StationID = st.ID where crd.InstrumentID = 1 and st.Country = 'BG';")
+    #cur.execute("select st.ID, st.Name, crd.Longitude, crd.Latitude, crd.Altitude from COORDINATE as crd left join STATION as st ON crd.StationID = st.ID where crd.InstrumentID = 1 and st.Country = 'BG';")
+    cur.execute("select st.ID, st.Name, crd.Longitude, crd.Latitude, crd.Altitude \
+      from SENSOR as sen left join SOURCE as so ON so.ID = sen.SourceID \
+      left join STATION as st ON st.ID = sen.StationID \
+      left join COORDINATE as crd ON crd.STationID = st.ID \
+      left join INSTRUMENT as instr ON instr.ID = crd.InstrumentID \
+      WHERE so.Name = %(source_name)s \
+      AND instr.Name = %(instrument_name)s", 
+      {
+        'source_name' : source_name,
+        'instrument_name' : instrument_name
+      })
 
     rows =  cur.fetchall()
 
@@ -67,6 +78,7 @@ def main(argv):
   prefix='wrfout_d02'
   env = 'dev' # possible options are 'dev' and 'prod'
   source_name = ''
+  instrument_name = 'GNSS'
 
   try:
     opts, args = getopt.getopt(argv,"h:b:p:s:",["basedir=","prefix=","source_name="])
@@ -116,7 +128,7 @@ def main(argv):
   print('Source id: {} found for source name: {}'.format(source_id, source_name))
 
   print('Get stations')
-  stations = getstations(cur)
+  stations = getstations(cur, source_name, instrument_name)
 
   print('Iterate files')
   # Iterate over list of all data files
@@ -180,8 +192,8 @@ def main(argv):
       y0 = station['latt']
       z0 = station['alt']
       rmin = math.sqrt((x0-(xlong[0][0]))**2+(y0-xlat[0][0])**2+(z0-alt[0][0])**2)
-      i0=0
-      j0=0
+      i0=-1
+      j0=-1
       for i in range(0, south_north - 1):
         for j in range(0, west_east - 1):
           x = xlong[i][j]
@@ -195,38 +207,39 @@ def main(argv):
             i0 = i
             j0 = j
 
-      press = Pressure[i][j]
-      heigth = HGT[i][j]
-      zhd = (0.0022768*(float(press)))/(1-0.00266*math.cos(2*(float(z0))*(3.1416/180))-(0.00028*(float(heigth))/1000))
-      # zhd = zenith hydrostatic delay
-      pblh = PBLH[i][j]
-      temp = T2[i][j]
-      rain = Precipitation[i][j]
-      print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [K]: {4}, Pressure [Pa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '.format(station['name'], xlong[i0][j0], xlat[i0][j0], alt[i0][j0], temp, press, rain, pblh, zhd))
+      if i0 > -1 and j0 > -1:
+        press = Pressure[i0][j0]
+        heigth = HGT[i0][j0]
+        zhd = (0.0022768*(float(press)))/(1-0.00266*math.cos(2*(float(z0))*(3.1416/180))-(0.00028*(float(heigth))/1000))
+        # zhd = zenith hydrostatic delay
+        pblh = PBLH[i0][j0]
+        temp = T2[i0][j0]
+        rain = Precipitation[i0][j0]
+        print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [K]: {4}, Pressure [Pa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '.format(station['name'], xlong[i0][j0], xlat[i0][j0], alt[i0][j0], temp, press, rain, pblh, zhd))
 
-      # SQL commands that insert values of parameters in the 1D table.
-      # If there is a dublicate, the existing fileds are updated.
-      cur.execute ( "insert into NWP_IN_1D (Datetime, Temperature, Pressure, Altitude, SensorID, Latitude, Longitude, ZHD, PBL, Precipitation)\
-                     values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) on duplicate key update\
-             Temperature = %s,\
-             Pressure = %s,\
-             Altitude = %s,\
-             Latitude = %s,\
-             Longitude = %s,\
-             ZHD = %s,\
-             PBL = %s,\
-             Precipitation = %s", [date, temp, press, heigth, stationSourceId, y, x, zhd, pblh, rain, temp, press, heigth, y, x, zhd, pblh, rain])
-      #db.commit()
-      # 3D data insert
-      for k in range(0, bottom_top):
-          theta = T[k][i0][j0] + 300.
-          Pair = P[k][i0][j0] + PB[k][i0][j0] # Press3D = Pair
-          tk  = theta * (( Pair/100000. )**(Rd_Cp))
-          QV = QVAPOR[k][i0][j0]
-          hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
+        # SQL commands that insert values of parameters in the 1D table.
+        # If there is a dublicate, the existing fileds are updated.
+        cur.execute ( "insert into NWP_IN_1D (Datetime, Temperature, Pressure, Altitude, SensorID, Latitude, Longitude, ZHD, PBL, Precipitation)\
+                       values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) on duplicate key update\
+                       Temperature = %s,\
+                       Pressure = %s,\
+                       Altitude = %s,\
+                       Latitude = %s,\
+                       Longitude = %s,\
+                       ZHD = %s,\
+                       PBL = %s,\
+                       Precipitation = %s", [date, temp, press, heigth, stationSourceId, y, x, zhd, pblh, rain, temp, press, heigth, y, x, zhd, pblh, rain])
+        #db.commit()
+        # 3D data insert
+        for k in range(0, bottom_top):
+            theta = T[k][i0][j0] + 300.
+            Pair = P[k][i0][j0] + PB[k][i0][j0] # Press3D = Pair
+            tk  = theta * (( Pair/100000. )**(Rd_Cp))
+            QV = QVAPOR[k][i0][j0]
+            hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
 
-          cur.execute ( "insert into NWP_IN_3D (Datetime, Temperature, Pressure, SensorID, Latitude, Longitude, Height, WV_Mixing_ratio, Level)\
-	                   	values (%s, %s, %s, %s, %s, %s, %s, %s, %s) on duplicate key update\
+            cur.execute ( "insert into NWP_IN_3D (Datetime, Temperature, Pressure, SensorID, Latitude, Longitude, Height, WV_Mixing_ratio, Level)\
+	                     	values (%s, %s, %s, %s, %s, %s, %s, %s, %s) on duplicate key update\
 				Temperature = %s,\
 				Pressure = %s,\
 			   	Latitude = %s,\
@@ -235,9 +248,9 @@ def main(argv):
 				WV_Mixing_ratio = %s,\
 				Level = %s", [date, tk, Pair, stationSourceId, y, x, hgth, QV, k, tk, Pair, y, x, hgth, QV, k]) # insert or update
 
-      db.commit()
-      # break
-      # QVAPOR is the mixing ratio
+        db.commit()
+        # break
+        # QVAPOR is the mixing ratio
 
   if not(len(flist)):
     print 'No candidates for impot files found ...'

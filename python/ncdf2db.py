@@ -76,8 +76,8 @@ def get_source_id(cur, source_name):
 def main(argv):
   basedir='./'
   prefix='wrfout_d02'
-  env = 'dev' # possible options are 'dev' and 'prod'
   source_name = ''
+  env = '' # possible options are 'dev' and 'prod'
   instrument_name = 'GNSS'
   
   try:
@@ -99,10 +99,16 @@ def main(argv):
       env = str(arg)
 
   # Check whether the user has specified source name. If not -> Error.
-  if source_name == None:
+  if source_name == '':
     print 'Error: You must specify the source name! (-s <source_name>)'
     sys.exit()
 
+  # Check whether the user has specified the database. If not -> Error.
+  if env == '':
+    print 'Error: You must specify the database! (-d <env>)'
+    sys.exit()
+
+ 
   # Retrieve the list of all data files
   # starting with [prefix] inside [basedir] folder
   flist = listfiles(basedir, prefix)

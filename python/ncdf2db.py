@@ -79,15 +79,15 @@ def main(argv):
   env = 'dev' # possible options are 'dev' and 'prod'
   source_name = ''
   instrument_name = 'GNSS'
-
+  
   try:
-    opts, args = getopt.getopt(argv,"h:b:p:s:",["basedir=","prefix=","source_name="])
+    opts, args = getopt.getopt(argv,"h:b:p:s:d:",["basedir=","prefix=","source_name=","env="])
   except getopt.GetoptError:
-    print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+']'
+    print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+' -d <env> ['+str(env)+']'
     sys.exit(2)
   for opt, arg in opts:
     if opt == '-h':
-      print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+']'
+      print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -d <env> ['+str(env)+']'
       sys.exit()
     elif opt in ("-b", "--basedir"):
       basedir = arg
@@ -95,6 +95,8 @@ def main(argv):
       prefix = arg
     elif opt in ("-s", "--source_name"):
       source_name = str(arg)
+    elif opt in ("-d", "--env"):
+      env = str(arg)
 
   # Check whether the user has specified source name. If not -> Error.
   if source_name == None:

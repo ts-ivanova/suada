@@ -115,11 +115,18 @@ def main(argv):
 
   # Create DB connection
   print('DB -> {}'.format(cfg.dev['db']))
-  # create DB connection
+ 
   db = None
   cur = None
   try:
-    db = MySQLdb.connect(host=cfg.dev['host'], user=cfg.dev['user'], passwd=cfg.dev['passwd'], db=cfg.dev['db'])
+    if env == 'dev':  
+      db = MySQLdb.connect(host=cfg.dev['host'], user=cfg.dev['user'], passwd=cfg.dev['passwd'], db=cfg.dev['db'])
+    #  cur = db.cursor()
+    elif env == 'prod':
+      db = MySQLdb.connect(host=cfg.prod['host'], user=cfg.prod['user'], passwd=cfg.prod['passwd'], db=cfg.prod['db'])
+    elif env != {'dev','prod'}:
+      print 'Error: No such database! (Possible options for -d <env> are "dev" and "prod".)'
+      sys.exit()
     cur = db.cursor()
   except Exception as e:
     print('Failed to establish connection: {0}'.format(e))

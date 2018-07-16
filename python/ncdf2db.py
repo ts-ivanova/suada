@@ -16,8 +16,12 @@ import math
 def getstations(cur, source_name, instrument_name):
   stations=[]
   try:
-    #cur.execute("select st.ID, st.Name, crd.Longitude, crd.Latitude, crd.Altitude from COORDINATE as crd left join STATION as st ON crd.StationID = st.ID where crd.InstrumentID = 1 and st.Country = 'BG';")
-    cur.execute("select st.ID, st.Name, crd.Longitude, crd.Latitude, crd.Altitude \
+    cur.execute("select st.ID, \
+      st.Name, \
+      crd.Longitude, \
+      crd.Latitude, \
+      crd.Altitude, \
+      sen.ID \
       from SENSOR as sen left join SOURCE as so ON so.ID = sen.SourceID \
       left join STATION as st ON st.ID = sen.StationID \
       left join COORDINATE as crd ON crd.STationID = st.ID \
@@ -33,7 +37,7 @@ def getstations(cur, source_name, instrument_name):
 
     if len(rows):
 	  for row in rows:
-	    stations.append({'id':row[0], 'name':row[1], 'long':row[2], 'latt':row[3], 'alt':row[4]})
+	    stations.append({'id':row[0], 'name':row[1], 'long':row[2], 'latt':row[3], 'alt':row[4], 'senid':row[5]})
   except Exception as e:
     print('Error at getstations: {}'.format(e))
 
@@ -114,15 +118,14 @@ def main(argv):
   flist = listfiles(basedir, prefix)
 
   # Create DB connection
-  print('DB -> {}'.format(cfg.dev['db']))
- 
   db = None
   cur = None
   try:
     if env == 'dev':  
+      print('DB -> {}'.format(cfg.dev['db']))
       db = MySQLdb.connect(host=cfg.dev['host'], user=cfg.dev['user'], passwd=cfg.dev['passwd'], db=cfg.dev['db'])
-    #  cur = db.cursor()
     elif env == 'prod':
+      print('DB -> {}'.format(cfg.prod['db']))
       db = MySQLdb.connect(host=cfg.prod['host'], user=cfg.prod['user'], passwd=cfg.prod['passwd'], db=cfg.prod['db'])
     elif env != {'dev','prod'}:
       print 'Error: No such database! (Possible options for -d <env> are "dev" and "prod".)'
@@ -189,20 +192,10 @@ def main(argv):
     # used for 3D calculation of tk
 
     for station in stations:
-      cur.execute("select ss.ID from SENSOR ss left join SOURCE src " +\
-              "on src.ID = ss.SourceID left join STATION stn " +\
-              "on stn.ID = ss.StationID where stn.ID = %s and src.ID = %s", [station['id'], source_id])
-      rows =  cur.fetchall()
       stationName = station['name']
       stationId = station['id']
-      if len(rows):
-        for row in rows:
-          stationSourceId = row[0]
-          print 'Station: ', station['name'], ' ID: ', station['id'], ' stationSourceId: ', stationSourceId
-      else:
-        stationSourceId = -1
-        print 'Error occured. I can\'t find stationSourceId for station ', stationName, ' ID: ', stationId
-        break
+      sensorId = station['senid']
+      print 'Station: ', station['name'], ' ID: ', station['id'], ' sensorId: ', sensorId
       x0 = station['long']
       y0 = station['latt']
       z0 = station['alt']
@@ -243,8 +236,7 @@ def main(argv):
                        Longitude = %s,\
                        ZHD = %s,\
                        PBL = %s,\
-                       Precipitation = %s", [date, temp, press, heigth, stationSourceId, y, x, zhd, pblh, rain, temp, press, heigth, y, x, zhd, pblh, rain])
-        #db.commit()
+                       Precipitation = %s", [date, temp, press, heigth, sensorId, y, x, zhd, pblh, rain, temp, press, heigth, y, x, zhd, pblh, rain])
         # 3D data insert
         for k in range(0, bottom_top):
             theta = T[k][i0][j0] + 300.
@@ -261,11 +253,9 @@ def main(argv):
 			   	Longitude = %s,\
 				Height = %s,\
 				WV_Mixing_ratio = %s,\
-				Level = %s", [date, tk, Pair, stationSourceId, y, x, hgth, QV, k, tk, Pair, y, x, hgth, QV, k]) # insert or update
+				Level = %s", [date, tk, Pair, sensorId, y, x, hgth, QV, k, tk, Pair, y, x, hgth, QV, k]) # insert or update
 
         db.commit()
-        # break
-        # QVAPOR is the mixing ratio
 
   if not(len(flist)):
     print 'No candidates for impot files found ...'

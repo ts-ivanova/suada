@@ -6,7 +6,7 @@ import datetime
 from netCDF4 import Dataset as netcdf
 import MySQLdb
 import databaseconfig as cfg
-import math
+import numpy as np
 
 # Aim of python scripts in this project: to export the model data stored in netCDF format to a SUADA database.
 
@@ -37,7 +37,12 @@ def getstations(cur, source_name, instrument_name):
 
     if len(rows):
 	  for row in rows:
-	    stations.append({'id':row[0], 'name':row[1], 'long':row[2], 'latt':row[3], 'alt':row[4], 'senid':row[5]})
+	    stations.append({'id':row[0],
+              'name':row[1],
+              'long':row[2], 
+              'latt':row[3],
+              'alt':row[4],
+              'senid':row[5]})
   except Exception as e:
     print('Error at getstations: {}'.format(e))
 
@@ -199,31 +204,48 @@ def main(argv):
       x0 = station['long']
       y0 = station['latt']
       z0 = station['alt']
-      rmin = math.sqrt((x0-(xlong[0][0]))**2+(y0-xlat[0][0])**2+(z0-alt[0][0])**2)
-      i0=-1
-      j0=-1
-      for i in range(0, south_north - 1):
-        for j in range(0, west_east - 1):
-          x = xlong[i][j]
-          y = xlat[i][j]
-          z = alt[i][j]
-          # calculate the distance to the closest meteostation
-          r = math.sqrt((x0-x)*(x0-x)+(y0-y)**2+(z0-z)**2)
 
-          if (r < rmin):
-            rmin = r
-            i0 = i
-            j0 = j
+      if 'i0' in station:
+        i0 = station['i0']
+        j0 = station['j0']
+      else:
+        rmin = np.sqrt((x0-(xlong[0][0]))**2+(y0-xlat[0][0])**2+(z0-alt[0][0])**2)
+        i0=-1
+        j0=-1
+        for i in range(0, south_north - 1):
+          for j in range(0, west_east - 1):
+            x = xlong[i][j]
+            y = xlat[i][j]
+            z = alt[i][j]
+            # calculate the distance to the closest meteostation
+            r = np.sqrt((x0-x)*(x0-x)+(y0-y)**2+(z0-z)**2)
+
+            if (r < rmin):
+              rmin = r
+              i0 = i
+              j0 = j
+
+        station['i0'] = i0
+        station['j0'] = j0
 
       if i0 > -1 and j0 > -1:
         press = Pressure[i0][j0]
         heigth = HGT[i0][j0]
-        zhd = (0.0022768*(float(press)))/(1-0.00266*math.cos(2*(float(z0))*(3.1416/180))-(0.00028*(float(heigth))/1000))
+        zhd = (0.0022768*(float(press)))/(1-0.00266*np.cos(2*(float(z0))*(3.1416/180))-(0.00028*(float(heigth))/1000))
         # zhd = zenith hydrostatic delay
         pblh = PBLH[i0][j0]
         temp = T2[i0][j0]
         rain = Precipitation[i0][j0]
-        print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [K]: {4}, Pressure [Pa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '.format(station['name'], xlong[i0][j0], xlat[i0][j0], alt[i0][j0], temp, press, rain, pblh, zhd))
+        print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [K]: {4}, Pressure [Pa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
+          .format(station['name'],
+          xlong[i0][j0],
+          xlat[i0][j0],
+          alt[i0][j0],
+          temp,
+          press,
+          rain,
+          pblh,
+          zhd))
 
         # SQL commands that insert values of parameters in the 1D table.
         # If there is a dublicate, the existing fileds are updated.
@@ -255,7 +277,7 @@ def main(argv):
 				WV_Mixing_ratio = %s,\
 				Level = %s", [date, tk, Pair, sensorId, y, x, hgth, QV, k, tk, Pair, y, x, hgth, QV, k]) # insert or update
 
-        db.commit()
+      db.commit()
 
   if not(len(flist)):
     print 'No candidates for impot files found ...'

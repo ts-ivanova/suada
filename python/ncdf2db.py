@@ -115,23 +115,21 @@ def main(argv):
             source_name = str(arg)
         elif opt in ("-d", "--env"):
             env = str(arg)
-
-  # Check whether the user has specified source name. If not -> Error.
+    # Check whether the user has specified source name. If not -> Error.
     if source_name == '':
         print 'Error: You must specify the source name! (-s <source_name>)'
         sys.exit()
 
-  # Check whether the user has specified the database. If not -> Error.
+    # Check whether the user has specified the database. If not -> Error.
     if env == '':
         print 'Error: You must specify the database! (-d <env>)'
         sys.exit()
 
- 
-  # Retrieve the list of all data files
-  # starting with [prefix] inside [basedir] folder
+    # Retrieve the list of all data files
+    # starting with [prefix] inside [basedir] folder
     flist = listfiles(basedir, prefix)
 
-  # Create DB connection
+    # Create DB connection
     db = None
     cur = None
     try:

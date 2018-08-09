@@ -4,7 +4,8 @@
 # Faculty of Physics
 # 2017, 2018
 
-# Aim of the python scripts in this project: to export the data from the WRF model stored in netCDF format to a SUADA database.
+# Aim of the python scripts in this project: to export the data from 
+# the WRF model stored in netCDF format to a SUADA database.
 
 import sys, getopt
 import glob
@@ -18,7 +19,8 @@ import numpy as np
 
 
 
-# Define a function that selects the stations' ID, Name, Longitude, Latitude, Altitude form the COORDINATE table:
+# Define a function that selects the stations' ID, Name, Longitude, 
+# Latitude, Altitude from the COORDINATE table:
 def getstations(cur, source_name, instrument_name):
     stations=[]
     try:
@@ -74,9 +76,7 @@ def get_source_id(cur, source_name):
     source_id = -1
     try:
         cur.execute("SELECT ID FROM SOURCE WHERE Name = %(source_name)s", {'source_name' : source_name})
-
         rows = cur.fetchall()
-
 
         if len(rows):
             for row in rows:
@@ -92,10 +92,18 @@ def get_source_id(cur, source_name):
     
 # Define the main procedure:
 def main(argv):
+    # The user has the option to specify the following two parameters when running the code: 
+    # -b <basedir>
+    # -p <prefix>
+    # And it is mandatory to specify the following:
+    # -s <source_name> - each user has a specific source_name that he/she should know (if not, see Instructions, point 7.
+    # -d <env> - the environment in which the data from the WRF model is going to be stored.
+    # -c <country> - the country in which all stations will be iterated through.
+
     basedir='./'
     prefix='wrfout_d02'
     source_name = ''
-    env = '' # possible options are 'dev' and 'prod'
+    env = '' # possible options are 'dev' and 'prod'. Soon txt
     instrument_name = 'GNSS'
   
     try:
@@ -135,10 +143,16 @@ def main(argv):
     try:
         if env == 'dev':  
             print('DB -> {}'.format(cfg.dev['db']))
-            db = MySQLdb.connect(host=cfg.dev['host'], user=cfg.dev['user'], passwd=cfg.dev['passwd'], db=cfg.dev['db'])
+            db = MySQLdb.connect(host=cfg.dev['host'], 
+                                 user=cfg.dev['user'], 
+                                 passwd=cfg.dev['passwd'], 
+                                 db=cfg.dev['db'])
         elif env == 'prod':
             print('DB -> {}'.format(cfg.prod['db']))
-            db = MySQLdb.connect(host=cfg.prod['host'], user=cfg.prod['user'], passwd=cfg.prod['passwd'], db=cfg.prod['db'])
+            db = MySQLdb.connect(host=cfg.prod['host'], 
+                                 user=cfg.prod['user'], 
+                                 passwd=cfg.prod['passwd'], 
+                                 db=cfg.prod['db'])
         elif env != {'dev','prod'}:
             print 'Error: No such database! (Possible options for -d <env> are "dev" and "prod".)'
             sys.exit()
@@ -161,6 +175,7 @@ def main(argv):
     stations = getstations(cur, source_name, instrument_name)
 
     print('Iterate files')
+    
     # Iterate over list of all data files
     for file in flist:
         field2D = []
@@ -201,7 +216,7 @@ def main(argv):
         Rd          = 287.0
         Cp          = 7.0*Rd / 2.0
         Rd_Cp       = Rd / Cp
-        # used for 3D calculation of tk
+        # Rd, Cp, Rd_Cp are used for 3D calculation of tk
         
         for station in stations:
             stationName = station['name']
@@ -283,7 +298,7 @@ def main(argv):
                     WV_Mixing_ratio = %s,\
                     Level = %s", [date, tk, Pair, sensorId, y, x, hgth, QV, k, tk, Pair, y, x, hgth, QV, k]) # insert or update
                     
-            db.commit()
+            db.commit() # commit all data to the specified -d <env>
     if not(len(flist)):
         print 'No candidates for import files found ...'
         sys.exit(1)

@@ -21,23 +21,27 @@ import numpy as np
 
 # Define a function that selects the stations' ID, Name, Longitude, 
 # Latitude, Altitude from the COORDINATE table:
-def getstations(cur, source_name, instrument_name):
+def getstations(cur, source_name, country, instrument_name):
     stations=[]
     try:
+# ?????
         cur.execute("select st.ID, \
             st.Name, \
             crd.Longitude, \
             crd.Latitude, \
             crd.Altitude, \
             sen.ID \
+            st.Country \
             from SENSOR as sen left join SOURCE as so ON so.ID = sen.SourceID \
             left join STATION as st ON st.ID = sen.StationID \
             left join COORDINATE as crd ON crd.STationID = st.ID \
             left join INSTRUMENT as instr ON instr.ID = crd.InstrumentID \
             WHERE so.Name = %(source_name)s \
+            AND st.Country = %(country)s \
             AND instr.Name = %(instrument_name)s", 
             {
                 'source_name' : source_name,
+                'country' : country,
                 'instrument_name' : instrument_name
             })
         rows =  cur.fetchall()
@@ -92,7 +96,7 @@ def get_source_id(cur, source_name):
 # Define a procedure that takes source_id as an argument 
 # and returns country as a result
 def get_station_name(cur, country):
-    name = -1
+    name = ''
     try:
         cur.execute("SELECT Name FROM STATION WHERE Country = %(country)s", {'country' : country})
         rows = cur.fetchall()
@@ -106,7 +110,9 @@ def get_station_name(cur, country):
         
     finally:
         return name
-    
+
+ 
+   
 # Define the main procedure:
 def main(argv):
     # The user has the option to specify the following two parameters when running the code: 
@@ -114,9 +120,8 @@ def main(argv):
     # -p <prefix>
     # And it is mandatory for the user to specify the following:
     # -s <source_name> - each user has a specific source_name that he/she should know (if not, see Instructions, point 7.
-    # -d <env> - the environment in which the data from the WRF model is going to be stored.
     # -c <country> - the country in which all stations will be iterated through.
-
+    # -d <env> - the environment in which the data from the WRF model is going to be stored.
     basedir='./'
     prefix='wrfout_d02'
     source_name = ''
@@ -194,20 +199,20 @@ def main(argv):
     print('Try to fetch the source_id ...')
     source_id = get_source_id(cur, source_name)
     if source_id < 0:
-        print 'Error: Can not find source_id for source name: {}'.format(source_name)
+        print 'Error: Can not find source_id for source_name: {}'.format(source_name)
         sys.exit(1)
  
     print('Try to fetch the station names for the selected country...')
-    name = get_station_name(cur, country)
-    if country != {'BG', 'GR', 'MK', 'IT', 'TR', 'CZ', 'SE', 'DE', 'HR', 'RO', 'CH'}
+    if country == {'BG', 'GR'}:
+        name = get_station_name(cur, country)
+    elif country != {'BG', 'GR'}:
         print 'Error: Can not find station names from the selected country: {}'.format(country)
         sys.exit(1)
-    
-    
+        
     print('Source id: {} found for source name: {}'.format(source_id, source_name))
     
     print('Get stations')
-    stations = getstations(cur, source_name, instrument_name)
+    stations = getstations(cur, source_name, country, instrument_name)
 
     print('Iterate files')
     

@@ -89,13 +89,30 @@ def get_source_id(cur, source_name):
         return source_id
 
     
+# Define a procedure that takes source_id as an argument 
+# and returns country as a result
+def get_station_name(cur, country):
+    name = -1
+    try:
+        cur.execute("SELECT Name FROM STATION WHERE Country = %(country)s", {'country' : country})
+        rows = cur.fetchall()
+        
+        if len(rows):
+            for row in rows:
+                name = row[0]
+                
+    except Exception as e:
+        print('Error at get_station_name: {}'.format(e))
+        
+    finally:
+        return name
     
 # Define the main procedure:
 def main(argv):
     # The user has the option to specify the following two parameters when running the code: 
     # -b <basedir>
     # -p <prefix>
-    # And it is mandatory to specify the following:
+    # And it is mandatory for the user to specify the following:
     # -s <source_name> - each user has a specific source_name that he/she should know (if not, see Instructions, point 7.
     # -d <env> - the environment in which the data from the WRF model is going to be stored.
     # -c <country> - the country in which all stations will be iterated through.
@@ -103,17 +120,19 @@ def main(argv):
     basedir='./'
     prefix='wrfout_d02'
     source_name = ''
+    country = '' #possible options are 'BG', 'GR', ...
     env = '' # possible options are 'dev' and 'prod'. Soon txt
     instrument_name = 'GNSS'
+    
   
     try:
-        opts, args = getopt.getopt(argv,"h:b:p:s:d:",["basedir=","prefix=","source_name=","env="])
+        opts, args = getopt.getopt(argv,"h:b:p:s:c:d:",["basedir=","prefix=","source_name=","country=","env="])
     except getopt.GetoptError:
-        print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -d <env> ['+str(env)+']'
+        print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+']'
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -d <env> ['+str(env)+']'
+            print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+']'
             sys.exit()
         elif opt in ("-b", "--basedir"):
             basedir = arg
@@ -121,6 +140,8 @@ def main(argv):
             prefix = arg
         elif opt in ("-s", "--source_name"):
             source_name = str(arg)
+        elif opt in ("-c", "--country"):
+            country = str(arg)
         elif opt in ("-d", "--env"):
             env = str(arg)
     # Check whether the user has specified source name. If not -> Error.
@@ -128,11 +149,18 @@ def main(argv):
         print 'Error: You must specify the source name! (-s <source_name>)'
         sys.exit()
 
+    # Check whether the user has specified the country. If not -> Error.
+    if country == '':
+        print 'Error: You must specify the country! (-c <country>)'
+        sys.exit()
+        
     # Check whether the user has specified the database. If not -> Error.
     if env == '':
         print 'Error: You must specify the database! (-d <env>)'
         sys.exit()
 
+
+        
     # Retrieve the list of all data files
     # starting with [prefix] inside [basedir] folder
     flist = listfiles(basedir, prefix)
@@ -169,6 +197,13 @@ def main(argv):
         print 'Error: Can not find source_id for source name: {}'.format(source_name)
         sys.exit(1)
  
+    print('Try to fetch the station names for the selected country...')
+    name = get_station_name(cur, country)
+    if country != {'BG', 'GR', 'MK', 'IT', 'TR', 'CZ', 'SE', 'DE', 'HR', 'RO', 'CH'}
+        print 'Error: Can not find station names from the selected country: {}'.format(country)
+        sys.exit(1)
+    
+    
     print('Source id: {} found for source name: {}'.format(source_id, source_name))
     
     print('Get stations')

@@ -24,7 +24,6 @@ import numpy as np
 def getstations(cur, source_name, country, instrument_name):
     stations=[]
     try:
-# ????? Is the following correct? (trying to add country here)
         cur.execute("select st.ID, \
             st.Name, \
             crd.Longitude, \

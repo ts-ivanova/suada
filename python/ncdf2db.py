@@ -30,7 +30,7 @@ def getstations(cur, source_name, country, instrument_name):
             crd.Longitude, \
             crd.Latitude, \
             crd.Altitude, \
-            sen.ID \
+            sen.ID, \
             st.Country \
             from SENSOR as sen left join SOURCE as so ON so.ID = sen.SourceID \
             left join STATION as st ON st.ID = sen.StationID \

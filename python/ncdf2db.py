@@ -1,6 +1,5 @@
 # Stoyan Pisov
 # Tsvetelina Ivanova
-
 # Faculty of Physics
 # 2017, 2018
 

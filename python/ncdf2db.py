@@ -52,7 +52,8 @@ def getstations(cur, source_name, country, instrument_name):
                                  'long':row[2], 
                                  'latt':row[3],
                                  'alt':row[4],
-                                 'senid':row[5]})
+                                 'senid':row[5],
+                                 'country':row[6]})
     except Exception as e:
         print('Error at getstations: {}'.format(e))
 
@@ -95,7 +96,7 @@ def get_source_id(cur, source_name):
 # Define a procedure that takes source_id as an argument 
 # and returns country as a result
 def get_station_name(cur, country):
-    name = ''
+    name = -1
     try:
         cur.execute("SELECT Name FROM STATION WHERE Country = %(country)s", {'country' : country})
         rows = cur.fetchall()
@@ -124,7 +125,7 @@ def main(argv):
     basedir='./'
     prefix='wrfout_d02'
     source_name = ''
-    country = '' #possible options are 'BG', 'GR', ...
+    country = all  #possible options are 'BG', 'GR', ...
     env = '' # possible options are 'dev' and 'prod'. Soon txt
     instrument_name = 'GNSS'
     
@@ -152,12 +153,7 @@ def main(argv):
     if source_name == '':
         print 'Error: You must specify the source name! (-s <source_name>)'
         sys.exit()
-
-    # Check whether the user has specified the country. If not -> Error.
-    if country == '':
-        print 'Error: You must specify the country! (-c <country>)'
-        sys.exit()
-        
+      
     # Check whether the user has specified the database. If not -> Error.
     if env == '':
         print 'Error: You must specify the database! (-d <env>)'
@@ -199,17 +195,16 @@ def main(argv):
     source_id = get_source_id(cur, source_name)
     if source_id < 0:
         print 'Error: Can not find source_id for source_name: {}'.format(source_name)
-        sys.exit(1)
- 
-    print('Try to fetch the station names for the selected country...')
-    if country == {'BG', 'GR'}:
-        name = get_station_name(cur, country)
-    elif country != {'BG', 'GR'}:
-        print 'Error: Can not find station names from the selected country: {}'.format(country)
-        sys.exit(1)
-        
+        sys.exit(1) 
+    
     print('Source id: {} found for source name: {}'.format(source_id, source_name))
     
+    print('Try to fetch the station names for the selected country...')
+    name = get_station_name(cur, country)
+    if name < 0:
+        print 'Error: Can not find station names from the selected country: {}'.format(country)
+        sys.exit(1)
+   
     print('Get stations')
     stations = getstations(cur, source_name, country, instrument_name)
 

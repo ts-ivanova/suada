@@ -147,6 +147,10 @@ def main(argv):
             source_name = str(arg)
         elif opt in ("-c", "--country"):
             country = str(arg)
+#            if len(str(arg)) = 0:
+#                country = all
+#            elif len(str(arg)) != 0:
+#                country = str(arg)
         elif opt in ("-d", "--env"):
             env = str(arg)
     # Check whether the user has specified source name. If not -> Error.

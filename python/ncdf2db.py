@@ -208,7 +208,8 @@ def main(argv):
         print 'Error: Can not find station names from the selected country: {}'.format(country)
         sys.exit(1)
 
-    # Call the procedure that selects the stations' information from the COORDINATE table:
+    # Call the procedure that selects the stations' information from the SUADA information tables:
+    # (The SUADA information tables are: INSTRUMENT, STATION, COORDINATE, SENSOR and SOURCE.)
     print('Get stations')
     stations = getstations(cur, source_name, country, instrument_name)
 

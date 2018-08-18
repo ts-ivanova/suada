@@ -1,11 +1,11 @@
 # Stoyan Pisov
 # Tsvetelina Ivanova
 
-# Faculty of Physics
+# Faculty of Physics, Sofia University "St. Kliment Ohridski"
 # 2017, 2018
 
 # Aim of the python scripts in this project: to export the data from 
-# the WRF model stored in netCDF format to a SUADA database.
+# the WRF model stored in netCDF format to a SUADA database (in NWP 1D and 3D tables).
 
 import sys, getopt
 import glob
@@ -19,8 +19,8 @@ import numpy as np
 
 
 
-# Define a function that selects the stations' ID, Name, Longitude, 
-# Latitude, Altitude from the COORDINATE table:
+# Define a procedure that selects the stations' ID, Name, Longitude, 
+# Latitude, Altitude from the SUADA information tables:
 def getstations(cur, source_name, country, instrument_name):
     stations=[]
     try:
@@ -61,7 +61,8 @@ def getstations(cur, source_name, country, instrument_name):
 
 
 
-# Define a function called listfiles:
+# Define a procedure that lists files containing data 
+# in the selected by the user base directory and prefix:
 def listfiles(basedir, prefix):
     files = []
     try:
@@ -75,39 +76,33 @@ def listfiles(basedir, prefix):
 
 # Define the following procedure that takes source_name as 
 # an argument and returns source_id as a result, which is 
-# later used when inserting into 1D and 3D databases.
+# later used when inserting into 1D and 3D databases:
 def get_source_id(cur, source_name):
     source_id = -1
     try:
         cur.execute("SELECT ID FROM SOURCE WHERE Name = %(source_name)s", {'source_name' : source_name})
         rows = cur.fetchall()
-
         if len(rows):
             for row in rows:
                 source_id = row[0]
-
     except Exception as e:
         print('Error at get_source_id: {}'.format(e))
-
     finally:
         return source_id
 
     
-# Define a procedure that takes source_id as an argument 
-# and returns country as a result
+# Define a procedure that takes the country (that the user specified when running the script) 
+# as an argument and returns the station names in this country as a result:
 def get_station_name(cur, country):
     name = -1
     try:
         cur.execute("SELECT Name FROM STATION WHERE Country = %(country)s", {'country' : country})
         rows = cur.fetchall()
-        
         if len(rows):
             for row in rows:
-                name = row[0]
-                
+                name = row[0]                
     except Exception as e:
         print('Error at get_station_name: {}'.format(e))
-        
     finally:
         return name
 
@@ -115,12 +110,12 @@ def get_station_name(cur, country):
    
 # Define the main procedure:
 def main(argv):
-    # The user has the option to specify the following two parameters when running the code: 
+    # The user has the option to specify the following parameters when running the code: 
     # -b <basedir>
     # -p <prefix>
     # And it is mandatory for the user to specify the following:
-    # -s <source_name> - each user has a specific source_name that he/she should know (if not, see Instructions, point 7.
-    # -c <country> - the country in which all stations will be iterated through.
+    # -s <source_name> - each user has a specific source_name that he/she should know (if not, see Instructions, point 7).
+    # -c <country> - the country in which all stations will be iterated through. (soon this parameter will be optional)
     # -d <env> - the environment in which the data from the WRF model is going to be stored.
     basedir='./'
     prefix='wrfout_d02'
@@ -153,6 +148,7 @@ def main(argv):
 #                country = str(arg)
         elif opt in ("-d", "--env"):
             env = str(arg)
+
     # Check whether the user has specified source name. If not -> Error.
     if source_name == '':
         print 'Error: You must specify the source name! (-s <source_name>)'
@@ -169,7 +165,8 @@ def main(argv):
     # starting with [prefix] inside [basedir] folder
     flist = listfiles(basedir, prefix)
 
-    # Create DB connection
+
+    # Create the DB connection:
     db = None
     cur = None
     try:
@@ -195,7 +192,8 @@ def main(argv):
         sys.exit(1)
 
 
-    print('Try to fetch the source_id ...')
+    # Fetching source_id...
+    print('Trying to fetch the source_id ...')
     source_id = get_source_id(cur, source_name)
     if source_id < 0:
         print 'Error: Can not find source_id for source_name: {}'.format(source_name)
@@ -203,18 +201,21 @@ def main(argv):
     
     print('Source id: {} found for source name: {}'.format(source_id, source_name))
     
-    print('Try to fetch the station names for the selected country...')
+    # Fetching station names for the selected country ...
+    print('Trying to fetch the station names for the selected country...')
     name = get_station_name(cur, country)
     if name < 0:
         print 'Error: Can not find station names from the selected country: {}'.format(country)
         sys.exit(1)
-   
+
+    # Call the procedure that selects the stations' information from the COORDINATE table:
     print('Get stations')
     stations = getstations(cur, source_name, country, instrument_name)
 
+
+    # Now iterating over list of all data files:
     print('Iterate files')
     
-    # Iterate over list of all data files
     for file in flist:
         field2D = []
         print 'Processing: ', file
@@ -241,7 +242,7 @@ def main(argv):
         south_north = len(xlong)
         west_east = len(xlong[0])
         # Above are most of the used parameters
-        # 3D fields
+        # 3D fields:
         T = ncfile.variables['T'][0]
         P = ncfile.variables['P'][0]
         PB = ncfile.variables['PB'][0]
@@ -254,7 +255,7 @@ def main(argv):
         Rd          = 287.0
         Cp          = 7.0*Rd / 2.0
         Rd_Cp       = Rd / Cp
-        # Rd, Cp, Rd_Cp are used for 3D calculation of tk
+        # Rd, Cp, Rd_Cp are used for 3D calculation of Tk
         
         for station in stations:
             stationName = station['name']
@@ -306,8 +307,9 @@ def main(argv):
                               pblh,
                               zhd))
 
-                # SQL commands that insert values of parameters in the 1D table.
+                # SQL commands that insert values of parameters in the tables.
                 # If there is a dublicate, the existing fileds are updated.
+                # 1D data insertion:
                 cur.execute ( "insert into NWP_IN_1D (Datetime, Temperature, Pressure, Altitude, SensorID, Latitude, Longitude, ZHD, PBL, Precipitation)\
                 values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) on duplicate key update\
                 Temperature = %s,\
@@ -318,7 +320,7 @@ def main(argv):
                 ZHD = %s,\
                 PBL = %s,\
                 Precipitation = %s", [date, temp, press, heigth, sensorId, y, x, zhd, pblh, rain, temp, press, heigth, y, x, zhd, pblh, rain])
-                # 3D data insert
+                # 3D data insertion:
                 for k in range(0, bottom_top):
                     theta = T[k][i0][j0] + 300.
                     Pair = P[k][i0][j0] + PB[k][i0][j0] # Press3D = Pair

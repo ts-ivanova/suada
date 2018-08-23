@@ -31,17 +31,14 @@ def getstations(cur, source_name, country, instrument_name):
                 crd.Latitude, \
                 crd.Altitude, \
                 sen.ID, \
-                st.Country \
                 from SENSOR as sen left join SOURCE as so ON so.ID = sen.SourceID \
                 left join STATION as st ON st.ID = sen.StationID \
                 left join COORDINATE as crd ON crd.STationID = st.ID \
                 left join INSTRUMENT as instr ON instr.ID = crd.InstrumentID \
                 WHERE so.Name = %(source_name)s \
-                AND st.Country IN %(country)s \
                 AND instr.Name = %(instrument_name)s", 
                 {
                     'source_name' : source_name,
-                    'country' : country,
                     'instrument_name' : instrument_name
                 })
             rows =  cur.fetchall()
@@ -129,7 +126,7 @@ def get_station_name(cur, country):
     name = -1
     try:
         if not country:
-            cur.execute("SELECT Name FROM STATION WHERE Country IN %(country)s", {'country' : country})
+            cur.execute("SELECT Name FROM STATION")
             rows = cur.fetchall()
             if len(rows):
                 for row in rows:

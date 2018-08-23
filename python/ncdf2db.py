@@ -24,36 +24,68 @@ import numpy as np
 def getstations(cur, source_name, country, instrument_name):
     stations=[]
     try:
-        cur.execute("select st.ID, \
-            st.Name, \
-            crd.Longitude, \
-            crd.Latitude, \
-            crd.Altitude, \
-            sen.ID, \
-            st.Country \
-            from SENSOR as sen left join SOURCE as so ON so.ID = sen.SourceID \
-            left join STATION as st ON st.ID = sen.StationID \
-            left join COORDINATE as crd ON crd.STationID = st.ID \
-            left join INSTRUMENT as instr ON instr.ID = crd.InstrumentID \
-            WHERE so.Name = %(source_name)s \
-            AND st.Country = %(country)s \
-            AND instr.Name = %(instrument_name)s", 
-            {
-                'source_name' : source_name,
-                'country' : country,
-                'instrument_name' : instrument_name
-            })
-        rows =  cur.fetchall()
+        if not country:
+            cur.execute("select st.ID, \
+                st.Name, \
+                crd.Longitude, \
+                crd.Latitude, \
+                crd.Altitude, \
+                sen.ID, \
+                st.Country \
+                from SENSOR as sen left join SOURCE as so ON so.ID = sen.SourceID \
+                left join STATION as st ON st.ID = sen.StationID \
+                left join COORDINATE as crd ON crd.STationID = st.ID \
+                left join INSTRUMENT as instr ON instr.ID = crd.InstrumentID \
+                WHERE so.Name = %(source_name)s \
+                AND st.Country IN %(country)s \
+                AND instr.Name = %(instrument_name)s", 
+                {
+                    'source_name' : source_name,
+                    'country' : country,
+                    'instrument_name' : instrument_name
+                })
+            rows =  cur.fetchall()
 
-        if len(rows):
-            for row in rows:
-                stations.append({'id':row[0],
-                                 'name':row[1],
-                                 'long':row[2], 
-                                 'latt':row[3],
-                                 'alt':row[4],
-                                 'senid':row[5],
-                                 'country':row[6]})
+            if len(rows):
+                for row in rows:
+                    stations.append({'id':row[0],
+                                     'name':row[1],
+                                     'long':row[2], 
+                                     'latt':row[3],
+                                     'alt':row[4],
+                                     'senid':row[5],
+                                     'country':row[6]})
+        if country:
+            cur.execute("select st.ID, \
+                st.Name, \
+                crd.Longitude, \
+                crd.Latitude, \
+                crd.Altitude, \
+                sen.ID, \
+                st.Country \
+                from SENSOR as sen left join SOURCE as so ON so.ID = sen.SourceID \
+                left join STATION as st ON st.ID = sen.StationID \
+                left join COORDINATE as crd ON crd.STationID = st.ID \
+                left join INSTRUMENT as instr ON instr.ID = crd.InstrumentID \
+                WHERE so.Name = %(source_name)s \
+                AND st.Country = %(country)s \
+                AND instr.Name = %(instrument_name)s", 
+                {
+                    'source_name' : source_name,
+                    'country' : country,
+                    'instrument_name' : instrument_name
+                })
+            rows =  cur.fetchall()
+
+            if len(rows):
+                for row in rows:
+                    stations.append({'id':row[0],
+                                     'name':row[1],
+                                     'long':row[2], 
+                                     'latt':row[3],
+                                     'alt':row[4],
+                                     'senid':row[5],
+                                     'country':row[6]})
     except Exception as e:
         print('Error at getstations: {}'.format(e))
 
@@ -96,11 +128,18 @@ def get_source_id(cur, source_name):
 def get_station_name(cur, country):
     name = -1
     try:
-        cur.execute("SELECT Name FROM STATION WHERE Country = %(country)s", {'country' : country})
-        rows = cur.fetchall()
-        if len(rows):
-            for row in rows:
-                name = row[0]                
+        if not country:
+            cur.execute("SELECT Name FROM STATION WHERE Country IN %(country)s", {'country' : country})
+            rows = cur.fetchall()
+            if len(rows):
+                for row in rows:
+                    name = row[0]                
+        if country:
+            cur.execute("SELECT Name FROM STATION WHERE Country = %(country)s", {'country' : country})
+            rows = cur.fetchall()
+            if len(rows):
+                for row in rows:
+                    name = row[0]                
     except Exception as e:
         print('Error at get_station_name: {}'.format(e))
     finally:
@@ -120,7 +159,8 @@ def main(argv):
     basedir='./'
     prefix='wrfout_d02'
     source_name = ''
-    country = all  #possible options are 'BG', 'GR', ...
+    All = {'TR', 'MK'}
+    country = All  #possible options are 'BG', 'GR', ...
     env = '' # possible options are 'dev' and 'prod'. Soon txt
     instrument_name = 'GNSS'
     
@@ -141,9 +181,13 @@ def main(argv):
         elif opt in ("-s", "--source_name"):
             source_name = str(arg)
         elif opt in ("-c", "--country"):
-            country = str(arg)
+#            country = str(arg)
+            if not country:
+                county = All
+            if country:
+                country = str(arg)
 #            if len(str(arg)) = 0:
-#                country = all
+#                country = All
 #            elif len(str(arg)) != 0:
 #                country = str(arg)
         elif opt in ("-d", "--env"):

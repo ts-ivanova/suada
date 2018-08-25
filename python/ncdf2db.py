@@ -4,7 +4,7 @@
 # Faculty of Physics, Sofia University "St. Kliment Ohridski"
 # 2017, 2018
 
-# Aim of the python scripts in this project: to export the data from 
+# Aim of the python scripts in this project: to export the data from
 # the WRF model stored in netCDF format to a SUADA database (in NWP 1D and 3D tables).
 
 import sys, getopt
@@ -19,7 +19,7 @@ import numpy as np
 
 
 
-# Define a procedure that selects the stations' ID, Name, Longitude, 
+# Define a procedure that selects the stations' ID, Name, Longitude,
 # Latitude, Altitude from the SUADA information tables:
 def getstations(cur, source_name, country, instrument_name):
     stations=[]
@@ -36,7 +36,7 @@ def getstations(cur, source_name, country, instrument_name):
                 left join COORDINATE as crd ON crd.STationID = st.ID \
                 left join INSTRUMENT as instr ON instr.ID = crd.InstrumentID \
                 WHERE so.Name = %(source_name)s \
-                AND instr.Name = %(instrument_name)s", 
+                AND instr.Name = %(instrument_name)s",
                 {
                     'source_name' : source_name,
                     'instrument_name' : instrument_name
@@ -47,7 +47,7 @@ def getstations(cur, source_name, country, instrument_name):
                 for row in rows:
                     stations.append({'id':row[0],
                                      'name':row[1],
-                                     'long':row[2], 
+                                     'long':row[2],
                                      'latt':row[3],
                                      'alt':row[4],
                                      'senid':row[5],
@@ -59,7 +59,7 @@ def getstations(cur, source_name, country, instrument_name):
 
 
 
-# Define a procedure that lists files containing data 
+# Define a procedure that lists files containing data
 # in the selected by the user base directory and prefix:
 def listfiles(basedir, prefix):
     files = []
@@ -72,8 +72,8 @@ def listfiles(basedir, prefix):
 
 
 
-# Define the following procedure that takes source_name as 
-# an argument and returns source_id as a result, which is 
+# Define the following procedure that takes source_name as
+# an argument and returns source_id as a result, which is
 # later used when inserting into 1D and 3D databases:
 def get_source_id(cur, source_name):
     source_id = -1
@@ -88,8 +88,8 @@ def get_source_id(cur, source_name):
     finally:
         return source_id
 
-    
-# Define a procedure that takes the country (that the user specified when running the script) 
+
+# Define a procedure that takes the country (that the user specified when running the script)
 # as an argument and returns the station names in this country as a result:
 def get_station_name(cur, country):
     name = -1
@@ -99,13 +99,13 @@ def get_station_name(cur, country):
             rows = cur.fetchall()
             if len(rows):
                 for row in rows:
-                    name = row[0]                
+                    name = row[0]
         if country:
             cur.execute("SELECT Name FROM STATION WHERE Country = %(country)s", {'country' : country})
             rows = cur.fetchall()
             if len(rows):
                 for row in rows:
-                    name = row[0]                
+                    name = row[0]
     except Exception as e:
         print('Error at get_station_name: {}'.format(e))
     finally:
@@ -213,7 +213,7 @@ def process_station(db, cur, station, ncfile, date):
 			tk  = theta * (( Pair/100000. )**(Rd_Cp))
 			QV = QVAPOR[k][i0][j0]
                     	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
-                    
+
 			cur.execute ( "insert into NWP_IN_3D (Datetime, \
 				Temperature, \
 				Pressure, \
@@ -230,7 +230,7 @@ def process_station(db, cur, station, ncfile, date):
 				Longitude = %s,\
 				Height = %s,\
 				WV_Mixing_ratio = %s,\
-				Level = %s", [date, 
+				Level = %s", [date,
 				tk,
 				Pair,
 				sensorId,
@@ -246,7 +246,7 @@ def process_station(db, cur, station, ncfile, date):
 				hgth,
 				QV,
 				k]) # insert or update
-                    
+
 		db.commit() # commit all data to the specified -d <env>
 
 	except Exception as e:
@@ -255,10 +255,10 @@ def process_station(db, cur, station, ncfile, date):
 
 
 		return result
-   
+
 # Define the main procedure:
 def main(argv):
-    # The user has the option to specify the following parameters when running the code: 
+    # The user has the option to specify the following parameters when running the code:
     # -b <basedir>
     # -p <prefix>
     # And it is mandatory for the user to specify the following:
@@ -272,8 +272,8 @@ def main(argv):
     country = 'All'  #possible options are 'BG', 'GR', ...
     env = '' # possible options are 'dev' and 'prod'. Soon txt
     instrument_name = 'GNSS'
-    
-  
+
+
     try:
         opts, args = getopt.getopt(argv,"h:b:p:s:c:d:",["basedir=","prefix=","source_name=","country=","env="])
     except getopt.GetoptError:
@@ -290,7 +290,6 @@ def main(argv):
         elif opt in ("-s", "--source_name"):
             source_name = str(arg)
         elif opt in ("-c", "--country"):
-#            country = str(arg)
             if not country:
                 county = 'All'
             if country:
@@ -302,14 +301,14 @@ def main(argv):
     if source_name == '':
         print 'Error: You must specify the source name! (-s <source_name>)'
         sys.exit()
-      
+
     # Check whether the user has specified the database. If not -> Error.
     if env == '':
         print 'Error: You must specify the database! (-d <env>)'
         sys.exit()
 
 
-        
+
     # Retrieve the list of all data files
     # starting with [prefix] inside [basedir] folder
     flist = listfiles(basedir, prefix)
@@ -319,17 +318,17 @@ def main(argv):
     db = None
     cur = None
     try:
-        if env == 'dev':  
+        if env == 'dev':
             print('DB -> {}'.format(cfg.dev['db']))
-            db = MySQLdb.connect(host=cfg.dev['host'], 
-                                 user=cfg.dev['user'], 
-                                 passwd=cfg.dev['passwd'], 
+            db = MySQLdb.connect(host=cfg.dev['host'],
+                                 user=cfg.dev['user'],
+                                 passwd=cfg.dev['passwd'],
                                  db=cfg.dev['db'])
         elif env == 'prod':
             print('DB -> {}'.format(cfg.prod['db']))
-            db = MySQLdb.connect(host=cfg.prod['host'], 
-                                 user=cfg.prod['user'], 
-                                 passwd=cfg.prod['passwd'], 
+            db = MySQLdb.connect(host=cfg.prod['host'],
+                                 user=cfg.prod['user'],
+                                 passwd=cfg.prod['passwd'],
                                  db=cfg.prod['db'])
         elif env != {'dev','prod'}:
             print 'Error: No such database! (Possible options for -d <env> are "dev" and "prod".)'
@@ -346,10 +345,10 @@ def main(argv):
     source_id = get_source_id(cur, source_name)
     if source_id < 0:
         print 'Error: Can not find source_id for source_name: {}'.format(source_name)
-        sys.exit(1) 
-    
+        sys.exit(1)
+
     print('Source id: {} found for source name: {}'.format(source_id, source_name))
-    
+
     # Call the procedure that selects the stations' information from the SUADA information tables:
     # (The SUADA information tables are: INSTRUMENT, STATION, COORDINATE, SENSOR and SOURCE.)
     print('Get stations')
@@ -358,7 +357,7 @@ def main(argv):
 
     # Now iterating over list of all data files:
     print('Iterate files')
-    
+
     for file in flist:
         field2D = []
         print 'Processing: ', file
@@ -375,7 +374,7 @@ def main(argv):
         alt = ncfile.variables['HGT'][0]
         south_north = len(xlong)
         west_east = len(xlong[0])
-        
+
         for station in stations:
             stationName = station['name']
             stationId = station['id']
@@ -384,7 +383,7 @@ def main(argv):
             x0 = station['long']
             y0 = station['latt']
             z0 = station['alt']
-            
+
             if 'i0' in station:
                 i0 = station['i0']
                 j0 = station['j0']
@@ -399,14 +398,14 @@ def main(argv):
                         z = alt[i][j]
                         # calculate the distance to the closest meteostation
                         r = np.sqrt((x0-x)*(x0-x)+(y0-y)**2+(z0-z)**2)
-                        
+
                         if (r < rmin):
                             rmin = r
                             i0 = i
                             j0 = j
                 station['i0'] = i0
                 station['j0'] = j0
-            
+
             if (i0 > -1 and j0 > -1) and ( (country == 'All') or (country == station['country']) ):
 		process_station(db, cur, station, ncfile, date)
 

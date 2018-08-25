@@ -1,4 +1,4 @@
 wrfout*
 *.pyc
 .ipynb_checkpoints/
-/python/databaseconfig.py
+!python/databaseconfig.py

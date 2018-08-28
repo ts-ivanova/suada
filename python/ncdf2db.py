@@ -144,14 +144,14 @@ def process_station(db, cur, station, ncfile, date):
 	        QVAPOR = ncfile.variables['QVAPOR'][0]
 
 		# Import 1D fields
-                press = Pressure[i0][j0]
+                press = Pressure[i0][j0]/100.
                 heigth = HGT[i0][j0]
-                zhd = (0.0022768*(float(press)))/(1-0.00266*np.cos(2*(float(z0))*(3.1416/180))-(0.00028*(float(heigth))/1000))
+                zhd = (0.0022768*(float(press)))/(1.-0.00266*np.cos(2*(float(z0))*(3.1416/180.))-(0.00028*(float(heigth))/1000.))
                 # zhd = zenith hydrostatic delay
                 pblh = PBLH[i0][j0]
-                temp = T2[i0][j0]
+                temp = T2[i0][j0]-273.17
                 rain = Precipitation[i0][j0]
-                print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [K]: {4}, Pressure [Pa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
+                print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
                       .format(station['name'],
                               x0,
                               y0,
@@ -203,17 +203,21 @@ def process_station(db, cur, station, ncfile, date):
 			rain])
                 # 3D data insertion:
 		bottom_top = len(T)
-		# Rd, Cp, Rd_Cp are used for 3D calculation of Tk
-		Rd  = 287.0
+                # First, calculation of tk:
+		# Rd, Cp, Rd_Cp are used for 3D calculation of tk (absolute temperature [K], and then it's converted to [C]):
+                Rd  = 287.0
 		Cp  = 7.0 * Rd / 2.0
-		Rd_Cp  = Rd / Cp
+		Rd_Cp  = Rd / Cp # dimensionless
                 for k in range(0, bottom_top):
-			theta = T[k][i0][j0] + 300.
-			Pair = P[k][i0][j0] + PB[k][i0][j0] # Press3D = Pair
-			tk  = theta * (( Pair/100000. )**(Rd_Cp))
-			QV = QVAPOR[k][i0][j0]
+			theta = T[k][i0][j0] + 300. # [K]
+			Pair = (P[k][i0][j0] + PB[k][i0][j0])/100. # Press3D = Pair/100.0 [hPa]
+                        # P is perturbation pressure; PB is base state pressure
+			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - 273.15 # (... - 273.15) converts temperature to Celsius.
+                        # (100.*Pair) is again in [Pa], because in the formula for tk it should be in [Pa].
+			QV = QVAPOR[k][i0][j0] # water vapour mixing ratio
                     	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
 
+                        #3D data insert:
 			cur.execute ( "insert into NWP_IN_3D (Datetime, \
 				Temperature, \
 				Pressure, \
@@ -256,19 +260,22 @@ def process_station(db, cur, station, ncfile, date):
 
 		return result
 
+
+
 # Define the main procedure:
 def main(argv):
-    # The user has the option to specify the following parameters when running the code:
+    # Optional for the user to specify are the following parameters:
     # -b <basedir>
     # -p <prefix>
-    # And it is mandatory for the user to specify the following:
-    # -s <source_name> - each user has a specific source_name that he/she should know (if not, see Instructions, point 7).
-    # -c <country> - the country in which all stations will be iterated through. (soon this parameter will be optional)
+    # -c <country> - the country in which all stations will be iterated through. 
+    # (If not specified - the script iterates through all countries.)
+    # Mandatory for the user to specify are the following:
+    # -s <source_name> - each user has a specific source_name that he/she should know 
+    # (if not, see Instructions, point 7).
     # -d <env> - the environment in which the data from the WRF model is going to be stored.
     basedir='./'
     prefix='wrfout_d02'
     source_name = ''
-    All = {'TR', 'MK'}
     country = 'All'  #possible options are 'BG', 'GR', ...
     env = '' # possible options are 'dev' and 'prod'. Soon txt
     instrument_name = 'GNSS'
@@ -291,7 +298,7 @@ def main(argv):
             source_name = str(arg)
         elif opt in ("-c", "--country"):
             if not country:
-                county = 'All'
+                country = 'All'
             if country:
                 country = str(arg)
         elif opt in ("-d", "--env"):

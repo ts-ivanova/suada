@@ -112,11 +112,13 @@ def get_station_name(cur, country):
         return name
 
 
+
+t_kelvin = 273.15             
 # Insert model data for station
 def process_station(db, cur, station, ncfile, date):
 	result = True
 	try:
-		stationName = station['name']
+                stationName = station['name']
 		stationId = station['id']
 		sensorId = station['senid']
 		x0 = station['long']
@@ -149,7 +151,7 @@ def process_station(db, cur, station, ncfile, date):
                 zhd = (0.0022768*(float(press)))/(1.-0.00266*np.cos(2*(float(z0))*(3.1416/180.))-(0.00028*(float(heigth))/1000.))
                 # zhd = zenith hydrostatic delay
                 pblh = PBLH[i0][j0]
-                temp = T2[i0][j0]-273.17
+                temp = T2[i0][j0]-t_kelvin
                 rain = Precipitation[i0][j0]
                 print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
                       .format(station['name'],
@@ -212,7 +214,7 @@ def process_station(db, cur, station, ncfile, date):
 			theta = T[k][i0][j0] + 300. # [K]
 			Pair = (P[k][i0][j0] + PB[k][i0][j0])/100. # Press3D = Pair/100.0 [hPa]
                         # P is perturbation pressure; PB is base state pressure
-			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - 273.15 # (... - 273.15) converts temperature to Celsius.
+			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - t_kelvin # (... - t_kelvin) converts T to Celsius.
                         # (100.*Pair) is again in [Pa], because in the formula for tk it should be in [Pa].
 			QV = QVAPOR[k][i0][j0] # water vapour mixing ratio
                     	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8

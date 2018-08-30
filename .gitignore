@@ -3,3 +3,4 @@ wrfout*
 .ipynb_checkpoints/
 python/databaseconfig.py
 python/databaseconfig.pyc
+python/ncdf2db-tst.py

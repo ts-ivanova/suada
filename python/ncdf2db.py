@@ -16,7 +16,7 @@ from netCDF4 import Dataset as netcdf
 import MySQLdb
 import databaseconfig as cfg
 import numpy as np
-
+import wrf
 
 
 # Define a procedure that selects the stations' ID, Name, Longitude,
@@ -381,8 +381,15 @@ def main(argv):
         xlong = ncfile.variables['XLONG'][0]
         xlat = ncfile.variables['XLAT'][0]
         alt = ncfile.variables['HGT'][0]
-        south_north = len(xlong)
-        west_east = len(xlong[0])
+	truelat1 = ncfile.TRUELAT1
+        truelat2 = ncfile.TRUELAT2
+        ref_lat  = ncfile.CEN_LAT
+        ref_lon  = ncfile.CEN_LON
+        stand_lon= ncfile.STAND_LON
+        dx = ncfile.DX
+        dy = ncfile.DY
+        west_east = ncfile.getncattr('WEST-EAST_GRID_DIMENSION')
+        south_north = ncfile.getncattr('SOUTH-NORTH_GRID_DIMENSION')
 
         for station in stations:
             stationName = station['name']
@@ -392,30 +399,15 @@ def main(argv):
             x0 = station['long']
             y0 = station['latt']
             z0 = station['alt']
+	    indx = wrf.ll_to_ij(1, truelat1, truelat2, stand_lon, dx, dy, ref_lat, ref_lon, y0, x0)
+            j0 = west_east / 2 + indx[0] - 1
+            i0 = south_north / 2 + indx[1] - 1
+            station['i0'] = i0
+            station['j0'] = j0
 
-            if 'i0' in station:
-                i0 = station['i0']
-                j0 = station['j0']
-            else:
-                rmin = np.sqrt((x0-(xlong[0][0]))**2+(y0-xlat[0][0])**2+(z0-alt[0][0])**2)
-                i0=-1
-                j0=-1
-                for i in range(0, south_north - 1):
-                    for j in range(0, west_east - 1):
-                        x = xlong[i][j]
-                        y = xlat[i][j]
-                        z = alt[i][j]
-                        # calculate the distance to the closest meteostation
-                        r = np.sqrt((x0-x)*(x0-x)+(y0-y)**2+(z0-z)**2)
-
-                        if (r < rmin):
-                            rmin = r
-                            i0 = i
-                            j0 = j
-                station['i0'] = i0
-                station['j0'] = j0
-
-            if (i0 > -1 and j0 > -1) and ( (country == 'All') or (country == station['country']) ):
+            if (i0 >= 0 and i0 <= south_north) and ( j0 >= 0 and j0 <= south_north) \
+		and ( (country == 'All') \
+		or (country == station['country']) ):
 		process_station(db, cur, station, ncfile, date)
 
     if not(len(flist)):

@@ -18,102 +18,93 @@ import databaseconfig as cfg
 import numpy as np
 import wrf
 
+# Define global variables
+t_kelvin = 273.15             
+
 
 # Define a procedure that selects the stations' ID, Name, Longitude,
 # Latitude, Altitude from the SUADA information tables:
 def getstations(cur, source_name, country, instrument_name):
-    stations=[]
-    try:
-            cur.execute("select st.ID, \
-                st.Name, \
-                crd.Longitude, \
-                crd.Latitude, \
-                crd.Altitude, \
-                sen.ID, \
-		st.Country \
-                from SENSOR as sen left join SOURCE as so ON so.ID = sen.SourceID \
-                left join STATION as st ON st.ID = sen.StationID \
-                left join COORDINATE as crd ON crd.STationID = st.ID \
-                left join INSTRUMENT as instr ON instr.ID = crd.InstrumentID \
-                WHERE so.Name = %(source_name)s \
-                AND instr.Name = %(instrument_name)s",
-                {
-                    'source_name' : source_name,
-                    'instrument_name' : instrument_name
-                })
-            rows =  cur.fetchall()
+	stations=[]
+	try:
+		cur.execute("select st.ID, \
+			st.Name, \
+			crd.Longitude, \
+			crd.Latitude, \
+			crd.Altitude, \
+			sen.ID, \
+			st.Country \
+			from SENSOR as sen left join SOURCE as so ON so.ID = sen.SourceID \
+			left join STATION as st ON st.ID = sen.StationID \
+			left join COORDINATE as crd ON crd.STationID = st.ID \
+			left join INSTRUMENT as instr ON instr.ID = crd.InstrumentID \
+			WHERE so.Name = %(source_name)s \
+			AND instr.Name = %(instrument_name)s",
+			{
+				'source_name' : source_name,
+				'instrument_name' : instrument_name
+			})
+		rows =  cur.fetchall()
 
-            if len(rows):
-                for row in rows:
-                    stations.append({'id':row[0],
-                                     'name':row[1],
-                                     'long':row[2],
-                                     'latt':row[3],
-                                     'alt':row[4],
-                                     'senid':row[5],
-                                     'country':row[6]})
-    except Exception as e:
-        print('Error at getstations: {}'.format(e))
+		if len(rows):
+			for row in rows:
+				stations.append({'id':row[0],
+					'name':row[1],
+					'long':row[2],
+					'latt':row[3],
+					'alt':row[4],
+					'senid':row[5],
+					'country':row[6]})
+	except Exception as e:
+		print('Error at getstations: {}'.format(e))
 
-    return stations
-
-
+	return stations
 
 # Define a procedure that lists files containing data
 # in the selected by the user base directory and prefix:
 def listfiles(basedir, prefix):
-    files = []
-    try:
-        for file in sorted(glob.glob(basedir+'/'+prefix+"*")):
-            files.append(file)
-    except Exception as e:
-        print('Exception reading basefolder {} {}'.format(basedir,e))
-    return files
-
-
+	files = []
+	try:
+		for file in sorted(glob.glob(basedir+'/'+prefix+"*")):
+			files.append(file)
+	except Exception as e:
+		print('Exception reading basefolder {} {}'.format(basedir,e))
+	return files
 
 # Define the following procedure that takes source_name as
 # an argument and returns source_id as a result, which is
 # later used when inserting into 1D and 3D databases:
 def get_source_id(cur, source_name):
-    source_id = -1
-    try:
-        cur.execute("SELECT ID FROM SOURCE WHERE Name = %(source_name)s", {'source_name' : source_name})
-        rows = cur.fetchall()
-        if len(rows):
-            for row in rows:
-                source_id = row[0]
-    except Exception as e:
-        print('Error at get_source_id: {}'.format(e))
-    finally:
-        return source_id
-
+	source_id = -1
+	try:
+		cur.execute("SELECT ID FROM SOURCE WHERE Name = %(source_name)s", {'source_name' : source_name})
+		rows = cur.fetchall()
+		if len(rows):
+			for row in rows:
+				source_id = row[0]
+	except Exception as e:
+		print('Error at get_source_id: {}'.format(e))
+	finally:
+		return source_id
 
 # Define a procedure that takes the country (that the user specified when running the script)
 # as an argument and returns the station names in this country as a result:
 def get_station_name(cur, country):
-    name = -1
-    try:
-        if not country:
-            cur.execute("SELECT Name FROM STATION")
-            rows = cur.fetchall()
-            if len(rows):
-                for row in rows:
-                    name = row[0]
-        if country:
-            cur.execute("SELECT Name FROM STATION WHERE Country = %(country)s", {'country' : country})
-            rows = cur.fetchall()
-            if len(rows):
-                for row in rows:
-                    name = row[0]
-    except Exception as e:
-        print('Error at get_station_name: {}'.format(e))
-    finally:
-        return name
+	name = -1
+	try:
+		if not country:
+			cur.execute("SELECT Name FROM STATION")
+		else:
+            		cur.execute("SELECT Name FROM STATION WHERE Country = %(country)s", {'country' : country})
+			rows = cur.fetchall()
+			if len(rows):
+				for row in rows:
+					name = row[0]
+	except Exception as e:
+		print('Error at get_station_name: {}'.format(e))
+	finally:
+		return name
 
-
-
-t_kelvin = 273.15             
 # Insert model data for station
 def process_station(db, cur, station, ncfile, date):
 	result = True
@@ -266,153 +257,146 @@ def process_station(db, cur, station, ncfile, date):
 
 # Define the main procedure:
 def main(argv):
-    # Optional for the user to specify are the following parameters:
-    # -b <basedir>
-    # -p <prefix>
-    # -c <country> - the country in which all stations will be iterated through. 
-    # (If not specified - the script iterates through all countries.)
-    # Mandatory for the user to specify are the following:
-    # -s <source_name> - each user has a specific source_name that he/she should know 
-    # (if not, see Instructions, point 7).
-    # -d <env> - the environment in which the data from the WRF model is going to be stored.
-    basedir='./'
-    prefix='wrfout_d02'
-    source_name = ''
-    country = 'All'  #possible options are 'BG', 'GR', ...
-    env = '' # possible options are 'dev' and 'prod'. Soon txt
-    instrument_name = 'GNSS'
+	# Optional for the user to specify are the following parameters:
+	# -b <basedir>
+	# -p <prefix>
+	# -c <country> - the country in which all stations will be iterated through. 
+	# (If not specified - the script iterates through all countries.)
+	# Mandatory for the user to specify are the following:
+	# -s <source_name> - each user has a specific source_name that he/she should know 
+	# (if not, see Instructions, point 7).
+	# -d <env> - the environment in which the data from the WRF model is going to be stored.
+	basedir='./'
+	prefix='wrfout_d02'
+	source_name = ''
+	country = 'All'  #possible options are 'BG', 'GR', ...
+	env = '' # possible options are 'dev' and 'prod'. Soon txt
+	instrument_name = 'GNSS'
 
+	try:
+		opts, args = getopt.getopt(argv,"h:b:p:s:c:d:",["basedir=","prefix=","source_name=","country=","env="])
+	except getopt.GetoptError:
+		print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+']'
+		sys.exit(2)
+	for opt, arg in opts:
+		if opt == '-h':
+			print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+']'
+			sys.exit()
+		elif opt in ("-b", "--basedir"):
+			basedir = arg
+		elif opt in ("-p", "--prefix"):
+			prefix = arg
+		elif opt in ("-s", "--source_name"):
+			source_name = str(arg)
+		elif opt in ("-c", "--country"):
+			if country:
+				country = str(arg)
+			else:
+				country = 'All'
+		elif opt in ("-d", "--env"):
+			env = str(arg)
 
-    try:
-        opts, args = getopt.getopt(argv,"h:b:p:s:c:d:",["basedir=","prefix=","source_name=","country=","env="])
-    except getopt.GetoptError:
-        print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+']'
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt == '-h':
-            print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+']'
-            sys.exit()
-        elif opt in ("-b", "--basedir"):
-            basedir = arg
-        elif opt in ("-p", "--prefix"):
-            prefix = arg
-        elif opt in ("-s", "--source_name"):
-            source_name = str(arg)
-        elif opt in ("-c", "--country"):
-            if not country:
-                country = 'All'
-            if country:
-                country = str(arg)
-        elif opt in ("-d", "--env"):
-            env = str(arg)
+	# Check whether the user has specified source name. If not -> Error.
+	if source_name == '':
+		print 'Error: You must specify the source name! (-s <source_name>)'
+		sys.exit()
 
-    # Check whether the user has specified source name. If not -> Error.
-    if source_name == '':
-        print 'Error: You must specify the source name! (-s <source_name>)'
-        sys.exit()
+	# Check whether the user has specified the database. If not -> Error.
+	if env == '':
+		print 'Error: You must specify the database! (-d <env>)'
+		sys.exit()
 
-    # Check whether the user has specified the database. If not -> Error.
-    if env == '':
-        print 'Error: You must specify the database! (-d <env>)'
-        sys.exit()
+	# Retrieve the list of all data files
+	# starting with [prefix] inside [basedir] folder
+	flist = listfiles(basedir, prefix)
 
+	# Create the DB connection:
+	db = None
+	cur = None
+	try:
+		if env == 'dev':
+			print('DB -> {}'.format(cfg.dev['db']))
+			db = MySQLdb.connect(host=cfg.dev['host'], \
+				user=cfg.dev['user'], \
+				passwd=cfg.dev['passwd'], \
+				db=cfg.dev['db'])
+		elif env == 'prod':
+			print('DB -> {}'.format(cfg.prod['db']))
+			db = MySQLdb.connect(host=cfg.prod['host'], \
+				user=cfg.prod['user'], \
+				passwd=cfg.prod['passwd'], \
+				db=cfg.prod['db'])
+		elif env != {'dev','prod'}:
+			print 'Error: No such database! (Possible options for -d <env> are "dev" and "prod".)'
+			sys.exit()
+		cur = db.cursor()
+	except Exception as e:
+		print('Failed to establish connection: {0}'.format(e))
+		cur.close()
+		sys.exit(1)
 
+	# Fetching source_id...
+	print('Trying to fetch the source_id ...')
+	source_id = get_source_id(cur, source_name)
+	if source_id < 0:
+		print 'Error: Can not find source_id for source_name: {}'.format(source_name)
+		sys.exit(1)
 
-    # Retrieve the list of all data files
-    # starting with [prefix] inside [basedir] folder
-    flist = listfiles(basedir, prefix)
+	print('Source id: {} found for source name: {}'.format(source_id, source_name))
 
+	# Call the procedure that selects the stations' information from the SUADA information tables:
+	# (The SUADA information tables are: INSTRUMENT, STATION, COORDINATE, SENSOR and SOURCE.)
+	print('Get stations')
+	stations = getstations(cur, source_name, country, instrument_name)
 
-    # Create the DB connection:
-    db = None
-    cur = None
-    try:
-        if env == 'dev':
-            print('DB -> {}'.format(cfg.dev['db']))
-            db = MySQLdb.connect(host=cfg.dev['host'],
-                                 user=cfg.dev['user'],
-                                 passwd=cfg.dev['passwd'],
-                                 db=cfg.dev['db'])
-        elif env == 'prod':
-            print('DB -> {}'.format(cfg.prod['db']))
-            db = MySQLdb.connect(host=cfg.prod['host'],
-                                 user=cfg.prod['user'],
-                                 passwd=cfg.prod['passwd'],
-                                 db=cfg.prod['db'])
-        elif env != {'dev','prod'}:
-            print 'Error: No such database! (Possible options for -d <env> are "dev" and "prod".)'
-            sys.exit()
-        cur = db.cursor()
-    except Exception as e:
-        print('Failed to establish connection: {0}'.format(e))
-        cur.close()
-        sys.exit(1)
+	# Now iterating over list of all data files:
+	print('Iterate files')
 
+	for file in flist:
+		field2D = []
+		print 'Processing: ', file
+		ncfile = netcdf(file)
+		strDateTime = ncfile.variables['Times'][0].tostring().replace('_', ' ')
+		local_tz = get_localzone()
+		date = parser.parse(strDateTime)
+		strDateTimeLocal = local_tz.localize(date)
+		# Print the timestamp
+		print('Dataset timestamp: {}'.format(strDateTimeLocal))
+		xlong = ncfile.variables['XLONG'][0]
+		xlat = ncfile.variables['XLAT'][0]
+		alt = ncfile.variables['HGT'][0]
+		truelat1 = ncfile.TRUELAT1
+		truelat2 = ncfile.TRUELAT2
+		ref_lat  = ncfile.CEN_LAT
+		ref_lon  = ncfile.CEN_LON
+		stand_lon= ncfile.STAND_LON
+		dx = ncfile.DX
+		dy = ncfile.DY
+		west_east = ncfile.getncattr('WEST-EAST_GRID_DIMENSION')
+		south_north = ncfile.getncattr('SOUTH-NORTH_GRID_DIMENSION')
 
-    # Fetching source_id...
-    print('Trying to fetch the source_id ...')
-    source_id = get_source_id(cur, source_name)
-    if source_id < 0:
-        print 'Error: Can not find source_id for source_name: {}'.format(source_name)
-        sys.exit(1)
+		for station in stations:
+			stationName = station['name']
+			stationId = station['id']
+			sensorId = station['senid']
+			print 'Station: ', station['name'], ' ID: ', station['id'], ' sensorId: ', sensorId, 'Country Code: ', station['country']
+			x0 = station['long']
+			y0 = station['latt']
+			z0 = station['alt']
+			indx = wrf.ll_to_ij(1, truelat1, truelat2, stand_lon, dx, dy, ref_lat, ref_lon, y0, x0)
+			j0 = west_east / 2 + indx[0] - 1
+			i0 = south_north / 2 + indx[1] - 1
+			station['i0'] = i0
+			station['j0'] = j0
 
-    print('Source id: {} found for source name: {}'.format(source_id, source_name))
+			if (i0 >= 0 and i0 <= south_north) and ( j0 >= 0 and j0 <= south_north) \
+				and ( (country == 'All') \
+				or (country == station['country']) ):
+				process_station(db, cur, station, ncfile, date)
 
-    # Call the procedure that selects the stations' information from the SUADA information tables:
-    # (The SUADA information tables are: INSTRUMENT, STATION, COORDINATE, SENSOR and SOURCE.)
-    print('Get stations')
-    stations = getstations(cur, source_name, country, instrument_name)
-
-
-    # Now iterating over list of all data files:
-    print('Iterate files')
-
-    for file in flist:
-        field2D = []
-        print 'Processing: ', file
-
-        ncfile = netcdf(file)
-        strDateTime = ncfile.variables['Times'][0].tostring().replace('_', ' ')
-        local_tz = get_localzone()
-        date = parser.parse(strDateTime)
-        strDateTimeLocal = local_tz.localize(date)
-        # Print the timestamp
-        print('Dataset timestamp: {}'.format(strDateTimeLocal))
-        xlong = ncfile.variables['XLONG'][0]
-        xlat = ncfile.variables['XLAT'][0]
-        alt = ncfile.variables['HGT'][0]
-	truelat1 = ncfile.TRUELAT1
-        truelat2 = ncfile.TRUELAT2
-        ref_lat  = ncfile.CEN_LAT
-        ref_lon  = ncfile.CEN_LON
-        stand_lon= ncfile.STAND_LON
-        dx = ncfile.DX
-        dy = ncfile.DY
-        west_east = ncfile.getncattr('WEST-EAST_GRID_DIMENSION')
-        south_north = ncfile.getncattr('SOUTH-NORTH_GRID_DIMENSION')
-
-        for station in stations:
-            stationName = station['name']
-            stationId = station['id']
-            sensorId = station['senid']
-            print 'Station: ', station['name'], ' ID: ', station['id'], ' sensorId: ', sensorId, 'Country Code: ', station['country']
-            x0 = station['long']
-            y0 = station['latt']
-            z0 = station['alt']
-	    indx = wrf.ll_to_ij(1, truelat1, truelat2, stand_lon, dx, dy, ref_lat, ref_lon, y0, x0)
-            j0 = west_east / 2 + indx[0] - 1
-            i0 = south_north / 2 + indx[1] - 1
-            station['i0'] = i0
-            station['j0'] = j0
-
-            if (i0 >= 0 and i0 <= south_north) and ( j0 >= 0 and j0 <= south_north) \
-		and ( (country == 'All') \
-		or (country == station['country']) ):
-		process_station(db, cur, station, ncfile, date)
-
-    if not(len(flist)):
-        print 'No candidates for import files found ...'
-        sys.exit(1)
+	if not(len(flist)):
+		print 'No candidates for import files found ...'
+		sys.exit(1)
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+	main(sys.argv[1:])

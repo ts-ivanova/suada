@@ -71,7 +71,7 @@ def listfiles(basedir, prefix):
 		print('Exception reading basefolder {} {}'.format(basedir,e))
 	return files
 
-# Define the following procedure that takes source_name as
+# Define a procedure that takes source_name as
 # an argument and returns source_id as a result, which is
 # later used when inserting into 1D and 3D databases:
 def get_source_id(cur, source_name):
@@ -105,7 +105,7 @@ def get_station_name(cur, country):
 	finally:
 		return name
 
-# Insert model data for station
+# Define a procedure that inserts model data for station:
 def process_station(db, cur, station, ncfile, date):
 	result = True
 	try:
@@ -249,9 +249,94 @@ def process_station(db, cur, station, ncfile, date):
 	except Exception as e:
 		sys.stderr.write('Error occured in process_station: {error}'.format(error = repr(e)))
 	finally:
-
-
 		return result
+
+
+
+#def troposinex_txt(station, ncfile, date):
+#	result = True
+#	try:
+#		# Note that from the following fields we will insert into txt format only the required ones
+#		# and the code lines for rest will be eventually removed from here.
+#               stationName = station['name'] # we use this in the example for writing to txt.
+#		stationId = station['id']
+#		sensorId = station['senid']
+#		x0 = station['long']
+#		y0 = station['latt']
+#		z0 = station['alt']
+#		i0 = station['i0']
+#		j0 = station['j0']
+#		print 'Station: ', station['name'], ' ID: ', station['id'], ' sensorId: ', sensorId
+#       	# 1D fields:
+#	        T2 = ncfile.variables['T2'][0]
+#        	Pressure = ncfile.variables['PSFC'][0]
+#	        PBLH = ncfile.variables['PBLH'][0]
+#	        HGT = ncfile.variables['HGT'][0]
+#	        RAINNC = ncfile.variables['RAINNC'][0]
+#	        SNOWNC = ncfile.variables['SNOWNC'][0]
+#	        GRAUPELNC = ncfile.variables['GRAUPELNC'][0]
+#	        HAILNC = ncfile.variables['HAILNC'][0]
+#	        Precipitation = RAINNC + SNOWNC + GRAUPELNC + HAILNC
+#	        # 3D fields:
+#	        T = ncfile.variables['T'][0]
+#	        P = ncfile.variables['P'][0]
+#	        PB = ncfile.variables['PB'][0]
+#	        PHB = ncfile.variables['PHB'][0]
+#	        PH = ncfile.variables['PH'][0]
+#	        QVAPOR = ncfile.variables['QVAPOR'][0]
+#
+#		# Import 1D fields
+#               press = Pressure[i0][j0]/100.
+#               heigth = HGT[i0][j0]
+#               zhd = (0.0022768*(float(press)))/(1.-0.00266*np.cos(2*(float(z0))*(3.1416/180.))-(0.00028*(float(heigth))/1000.))
+#               # zhd = zenith hydrostatic delay
+#               pblh = PBLH[i0][j0]
+#               temp = T2[i0][j0]-t_kelvin
+#               rain = Precipitation[i0][j0]
+#               print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
+#                      .format(station['name'],
+#                             x0,
+#                             y0,
+#                             z0,
+#                             temp,
+#                             press,
+#                             rain,
+#                             pblh,
+#                             zhd))
+#		bottom_top = len(T)
+#               # Calculation of tk:
+# 		# Rd, Cp, Rd_Cp are used for 3D calculation of tk (absolute temperature [K], and then it's converted to [C]):
+#               Rd  = 287.0
+#		Cp  = 7.0 * Rd / 2.0
+#		Rd_Cp  = Rd / Cp # dimensionless
+#               for k in range(0, bottom_top):
+#			theta = T[k][i0][j0] + 300. # [K]
+#			Pair = (P[k][i0][j0] + PB[k][i0][j0])/100. # Press3D = Pair/100.0 [hPa]
+#                       # P is perturbation pressure; PB is base state pressure
+#			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - t_kelvin # (... - t_kelvin) converts T to Celsius.
+#                       # (100.*Pair) is again in [Pa], because in the formula for tk it should be in [Pa].
+#			QV = QVAPOR[k][i0][j0] # water vapour mixing ratio
+#                   	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
+#
+#
+#               # Insert values of parameters in txt format:
+#		line_to_start_from = 10 # the number of the line from which we want to start inserting data 
+#		# (because of the header)
+#		with open("troposinex.txt", "r") as troposinex:
+#			lines = troposinex.readlines()
+#		# now we have an array of lines. We want to start inserting from line 10:
+#		if len(lines) > int(line_to_start_from):
+#			lines[line_to_start_from] = "Station name: {}".format(stationName)
+#
+#		with open("troposinex.txt", "w") as troposinex:
+#			troposinex.writelines( lines )
+#
+#
+#	except Exception as e:
+#		sys.stderr.write('Error occured in troposinex_txt: {error}'.format(error = repr(e)))
+#	finally:
+#		return result
+
 
 
 
@@ -326,8 +411,11 @@ def main(argv):
 				user=cfg.prod['user'], \
 				passwd=cfg.prod['passwd'], \
 				db=cfg.prod['db'])
-		elif env != {'dev','prod'}:
-			print 'Error: No such database! (Possible options for -d <env> are "dev" and "prod".)'
+#		elif env == 'txt':
+#			tropo = troposinex_txt(ncfile, date)
+#			(Call the troposinex_txt procedure.)
+		elif env != {'dev','prod', 'txt'}:
+			print 'Error: No such database or format! (Possible options for -d <env> are "dev", "prod" and "txt".)'
 			sys.exit()
 		cur = db.cursor()
 	except Exception as e:

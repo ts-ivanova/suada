@@ -257,7 +257,7 @@ def process_station(db, cur, station, ncfile, date):
 def troposinex_txt(station, ncfile, date):
 	result = True
 	try:
-		stationName = station['name'] # we use this in the example for writing to txt.
+		stationName = station['name']
 		stationId = station['id']
 		sensorId = station['senid']
 		x0 = station['long']
@@ -266,7 +266,7 @@ def troposinex_txt(station, ncfile, date):
 		i0 = station['i0']
 		j0 = station['j0']
 		print 'Station: ', station['name'], ' ID: ', station['id'], ' sensorId: ', sensorId
-       	# 1D fields:
+       		# 1D fields:
 		T2 = ncfile.variables['T2'][0]
 		Pressure = ncfile.variables['PSFC'][0]
 		PBLH = ncfile.variables['PBLH'][0]
@@ -302,7 +302,7 @@ def troposinex_txt(station, ncfile, date):
 							pblh,
 							zhd))
 		bottom_top = len(T)
-        # Calculation of tk:
+        	# Calculation of tk:
  		# Rd, Cp, Rd_Cp are used for 3D calculation of tk (absolute temperature [K], and then it's converted to [C]):
  		Rd  = 287.0
 		Cp  = 7.0 * Rd / 2.0
@@ -320,7 +320,7 @@ def troposinex_txt(station, ncfile, date):
 		# Insert values of parameters in txt format:
 		match = "TEMPDRY"
 		content = []
-		with open('troposinex_template.txt') as troposinex
+		with open('troposinex_template.txt') as troposinex:
 			for line in troposinex:
 				content.append(line)
 				if match in line:
@@ -413,8 +413,8 @@ def main(argv):
 				user=cfg.prod['user'], \
 				passwd=cfg.prod['passwd'], \
 				db=cfg.prod['db'])
-#		elif env == 'txt':
-#			tropo = troposinex_txt(ncfile, date)
+		elif env == 'txt':
+			troposinex_txt(station, ncfile, date)
 #			(Call the troposinex_txt procedure.)
 		elif env != {'dev','prod', 'txt'}:
 			print 'Error: No such database or format! (Possible options for -d <env> are "dev", "prod" and "txt".)'

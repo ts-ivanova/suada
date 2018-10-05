@@ -1,1 +1,40 @@
+%=TRO
 
+*---------------------------
++FILE/REFERENCE
+*INFO_TYPE_____
+INFO_____
+DESCRIPTION	SUGAC
+OUTPUT	SUGAC
+CONTACT	GUEROVA
+SOFTWARE	WRFv3.7.1
+-FILE/REFERENCE
+
+*---------------------------
++TROP/DESCRIPTION
+
+-TROP/DESCRIPTION
+
+*--------
++SITE/ID
+
+-SITE/ID
+
+*---------------------------
++SITE/COORDINATES
+*STATION 
+
+-SITE/COORDINATES
+
+*---------------------------
++TROP/SOLUTION
+
+TEMPDRY = 
+PRESS = 
+IWV = 
+TRODRY = 
+TROWET = 
+
+-TROP/SOLUTION
+
+%=ENDTRO

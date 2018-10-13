@@ -106,7 +106,7 @@ def get_station_name(cur, country):
 	finally:
 		return name
 
-# Define a procedure that inserts model data for station:
+# Define a procedure that inserts model data for each station into the SUADA database:
 def process_station(db, cur, station, ncfile, date):
 	result = True
 	try:
@@ -254,10 +254,11 @@ def process_station(db, cur, station, ncfile, date):
 
 
 
-def troposinex_txt(station, ncfile, date):
+# Define a procedure that accumulates data for each station:
+def process_station_tro(station, ncfile, date):
 	result = True
 	try:
-		stationName = station['name']
+                stationName = station['name']
 		stationId = station['id']
 		sensorId = station['senid']
 		x0 = station['long']
@@ -266,79 +267,101 @@ def troposinex_txt(station, ncfile, date):
 		i0 = station['i0']
 		j0 = station['j0']
 		print 'Station: ', station['name'], ' ID: ', station['id'], ' sensorId: ', sensorId
-       		# 1D fields:
-		T2 = ncfile.variables['T2'][0]
-		Pressure = ncfile.variables['PSFC'][0]
-		PBLH = ncfile.variables['PBLH'][0]
-		HGT = ncfile.variables['HGT'][0]
-		RAINNC = ncfile.variables['RAINNC'][0]
-		SNOWNC = ncfile.variables['SNOWNC'][0]
-		GRAUPELNC = ncfile.variables['GRAUPELNC'][0]
-		HAILNC = ncfile.variables['HAILNC'][0]
-		Precipitation = RAINNC + SNOWNC + GRAUPELNC + HAILNC
-		# 3D fields:
-		T = ncfile.variables['T'][0]
-		P = ncfile.variables['P'][0]
-		PB = ncfile.variables['PB'][0]
-		PHB = ncfile.variables['PHB'][0]
-		PH = ncfile.variables['PH'][0]
-		QVAPOR = ncfile.variables['QVAPOR'][0]
+        	# 1D fields:
+	        T2 = ncfile.variables['T2'][0]
+        	Pressure = ncfile.variables['PSFC'][0]
+	        PBLH = ncfile.variables['PBLH'][0]
+	        HGT = ncfile.variables['HGT'][0]
+	        RAINNC = ncfile.variables['RAINNC'][0]
+	        SNOWNC = ncfile.variables['SNOWNC'][0]
+	        GRAUPELNC = ncfile.variables['GRAUPELNC'][0]
+	        HAILNC = ncfile.variables['HAILNC'][0]
+	        Precipitation = RAINNC + SNOWNC + GRAUPELNC + HAILNC
+	        # 3D fields:
+	        T = ncfile.variables['T'][0]
+	        P = ncfile.variables['P'][0]
+	        PB = ncfile.variables['PB'][0]
+	        PHB = ncfile.variables['PHB'][0]
+	        PH = ncfile.variables['PH'][0]
+	        QVAPOR = ncfile.variables['QVAPOR'][0]
+
 		# Import 1D fields
-		press = Pressure[i0][j0]/100.
-		heigth = HGT[i0][j0]
-		zhd = (0.0022768*(float(press)))/(1.-0.00266*np.cos(2*(float(z0))*(3.1416/180.))-(0.00028*(float(heigth))/1000.))
-		# zhd = zenith hydrostatic delay
-		pblh = PBLH[i0][j0]
-		temp = T2[i0][j0]-t_kelvin
-		rain = Precipitation[i0][j0]
-		print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
-							.format(station['name'],
-							x0,
-							y0,
-							z0,
-							temp,
-							press,
-							rain,
-							pblh,
-							zhd))
+                press = Pressure[i0][j0]/100.
+                heigth = HGT[i0][j0]
+                zhd = (0.0022768*(float(press)))/(1.-0.00266*np.cos(2*(float(z0))*(3.1416/180.))-(0.00028*(float(heigth))/1000.))
+                # zhd = zenith hydrostatic delay
+                pblh = PBLH[i0][j0]
+                temp = T2[i0][j0]-t_kelvin
+                rain = Precipitation[i0][j0]
+                print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
+                      .format(station['name'],
+                              x0,
+                              y0,
+                              z0,
+                              temp,
+                              press,
+                              rain,
+                              pblh,
+                              zhd))
+
+		# A list of the parameters calculated from the one-dimensional SUADA tables:
+		onedim = [date,temp,press,heigth,sensorId,y0,x0,zhd,pblh,rain]
+
+		# 3D table calculations:
 		bottom_top = len(T)
-        	# Calculation of tk:
- 		# Rd, Cp, Rd_Cp are used for 3D calculation of tk (absolute temperature [K], and then it's converted to [C]):
- 		Rd  = 287.0
+                # First, calculation of tk:
+		# Rd, Cp, Rd_Cp are used for 3D calculation of tk (absolute temperature [K], and then it's converted to [C]):
+                Rd  = 287.0
 		Cp  = 7.0 * Rd / 2.0
 		Rd_Cp  = Rd / Cp # dimensionless
-		for k in range(0, bottom_top):
+                for k in range(0, bottom_top):
 			theta = T[k][i0][j0] + 300. # [K]
 			Pair = (P[k][i0][j0] + PB[k][i0][j0])/100. # Press3D = Pair/100.0 [hPa]
-			# P is perturbation pressure; PB is base state pressure
+                        # P is perturbation pressure; PB is base state pressure
 			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - t_kelvin # (... - t_kelvin) converts T to Celsius.
-			# (100.*Pair) is again in [Pa], because in the formula for tk it should be in [Pa].
+                        # (100.*Pair) is again in [Pa], because in the formula for tk it should be in [Pa].
 			QV = QVAPOR[k][i0][j0] # water vapour mixing ratio
-			hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
+                    	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
+
+			# A list of the parameters calculated from the three-dimensional SUADA tables:
+                        threedim = [date,tk,Pair,sensorId,y0,x0,hgth,QV,k]
 
 
 		# Insert values of parameters in txt format:
-		match = "TEMPDRY"
-		content = []
-		with open('troposinex_template.txt', 'r+') as troposinex:
-			for line in troposinex:
-				content.append(line)
-				if match in line:
-					content.append(temp)
-				else:
-					print 'Troposinex format error in TEMPDRY! (not an existing field.)'
-				content.append(temp)
-			troposinex.seek(0)
-			troposinex.truncate()
-			troposinex.write("".join(content))
-			troposinex.close
-		# Analogous for PRESS, IWV, TRODRY, TROWET, IWP.
+		with open('troposinex.txt', 'w') as troposinex:
+			troposinex.write(onedim)
+#			for line in troposinex:
+#				onedim.append(line)
+#			troposinex.seek(0)
+#			troposinex.truncate()
+#			troposinex.write("".join(content))
+			troposinex.close()
+
 
 	except Exception as e:
-		sys.stderr.write('Error occured in troposinex_txt: {error}'.format(error = repr(e)))
+		sys.stderr.write('Error occured in process_station_tro: {error}'.format(error = repr(e)))
 	finally:
 		return result
 
+
+
+# Define a procedure that exports the accumulated data into txt format:
+#def tropo_out(station, ncfile, date):
+#	result = True
+#	try:
+#		# Insert values of parameters in txt format:
+#		with open('troposinex.txt', 'r+') as troposinex:
+#			for line in troposinex:
+#				onedim.append(line)
+#			troposinex.seek(0)
+#			troposinex.truncate()
+#			troposinex.write("".join(content))
+#			troposinex.close
+#
+#	except Exception as e: 
+#		sys.stderr.write('Error occured in tropo_out: {error}'.format(error = repr(e)))
+#	finally:
+#		return result
 
 
 
@@ -353,21 +376,23 @@ def main(argv):
 	# -s <source_name> - each user has a specific source_name that he/she should know
 	# (if not, see Instructions, point 7).
 	# -d <env> - the environment in which the data from the WRF model is going to be stored.
+	# -o <output> - either insert data into database or export it to txt fomrat.
 	basedir='./'
 	prefix='wrfout_d02'
 	source_name = ''
-	country = 'All'  #possible options are 'BG', 'GR', ...
-	env = '' # possible options are 'dev' and 'prod'. Soon txt
+	country = 'All' # By default: 'All'. Possible options are 'BG', 'GR', ...
+	env = '' # possible options are 'dev' and 'prod'.
+	output = 'db' # By default: 'db'. Possible options: 'db', 'tro'.  
 	instrument_name = 'GNSS'
-
+	
 	try:
-		opts, args = getopt.getopt(argv,"h:b:p:s:c:d:",["basedir=","prefix=","source_name=","country=","env="])
+		opts, args = getopt.getopt(argv,"h:b:p:s:c:d:o",["basedir=","prefix=","source_name=","country=","env=","output="])
 	except getopt.GetoptError:
-		print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+']'
+		print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+'] -o <output> ['+output+']'
 		sys.exit(2)
 	for opt, arg in opts:
 		if opt == '-h':
-			print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+']'
+			print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+'] -o <output> ['+str(output)+']'
 			sys.exit()
 		elif opt in ("-b", "--basedir"):
 			basedir = arg
@@ -382,6 +407,11 @@ def main(argv):
 				country = 'All'
 		elif opt in ("-d", "--env"):
 			env = str(arg)
+		elif opt in ("-o", "--output"):
+			if output:
+				output = str(output)
+			else:
+				output = 'db'
 
 	# Check whether the user has specified source name. If not -> Error.
 	if source_name == '':
@@ -413,11 +443,8 @@ def main(argv):
 				user=cfg.prod['user'], \
 				passwd=cfg.prod['passwd'], \
 				db=cfg.prod['db'])
-		elif env == 'txt':
-			troposinex_txt(station, ncfile, date)
-#			(Call the troposinex_txt procedure.)
-		elif env != {'dev','prod', 'txt'}:
-			print 'Error: No such database or format! (Possible options for -d <env> are "dev", "prod" and "txt".)'
+		elif env != {'dev','prod'}:
+			print 'Error: No such database! (Possible options for -d <env> are "dev" and "prod".)'
 			sys.exit()
 		cur = db.cursor()
 	except Exception as e:
@@ -465,6 +492,8 @@ def main(argv):
 		west_east = ncfile.getncattr('WEST-EAST_GRID_DIMENSION')
 		south_north = ncfile.getncattr('SOUTH-NORTH_GRID_DIMENSION')
 
+		# Empty list to contain data:
+		data = []
 		for station in stations:
 			stationName = station['name']
 			stationId = station['id']
@@ -482,7 +511,17 @@ def main(argv):
 			if (i0 >= 0 and i0 <= south_north) and ( j0 >= 0 and j0 <= south_north) \
 				and ( (country == 'All') \
 				or (country == station['country']) ):
-				process_station(db, cur, station, ncfile, date)
+					try:
+						if output == 'db':
+							process_station(db, cur, station, ncfile, date)
+						elif output == 'tro':
+							process_station_tro(station, ncfile, date)
+						elif output != {'db','tro'}:
+							print 'Error: Not a possible output! (Possible options for -o <output> are "db" and "tro".)'
+							sys.exit()
+					except Exception as e:	
+						print ('Error in output - Failed to process stations: {0}'.format(e))
+						sys.exit(1)
 
 	if not(len(flist)):
 		print 'No candidates for import files found ...'

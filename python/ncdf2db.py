@@ -320,7 +320,7 @@ def troposinex_txt(station, ncfile, date):
 		# Insert values of parameters in txt format:
 		match = "TEMPDRY"
 		content = []
-		with open('troposinex_template.txt') as troposinex:
+		with open('troposinex_template.txt', 'r+') as troposinex:
 			for line in troposinex:
 				content.append(line)
 				if match in line:

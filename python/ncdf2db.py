@@ -303,40 +303,14 @@ def process_station_tro(station, ncfile, date):
                               rain,
                               pblh,
                               zhd))
-
-		# A list of the parameters calculated from the one-dimensional SUADA tables:
-		onedim = [date,temp,press,heigth,sensorId,y0,x0,zhd,pblh,rain]
-
-		# 3D table calculations:
-		bottom_top = len(T)
-                # First, calculation of tk:
-		# Rd, Cp, Rd_Cp are used for 3D calculation of tk (absolute temperature [K], and then it's converted to [C]):
-                Rd  = 287.0
-		Cp  = 7.0 * Rd / 2.0
-		Rd_Cp  = Rd / Cp # dimensionless
-                for k in range(0, bottom_top):
-			theta = T[k][i0][j0] + 300. # [K]
-			Pair = (P[k][i0][j0] + PB[k][i0][j0])/100. # Press3D = Pair/100.0 [hPa]
-                        # P is perturbation pressure; PB is base state pressure
-			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - t_kelvin # (... - t_kelvin) converts T to Celsius.
-                        # (100.*Pair) is again in [Pa], because in the formula for tk it should be in [Pa].
-			QV = QVAPOR[k][i0][j0] # water vapour mixing ratio
-                    	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
-
-			# A list of the parameters calculated from the three-dimensional SUADA tables:
-                        threedim = [date,tk,Pair,sensorId,y0,x0,hgth,QV,k]
-
-
-		# Insert values of parameters in txt format:
-		with open('troposinex.txt', 'w') as troposinex:
-			troposinex.write(onedim)
-#			for line in troposinex:
-#				onedim.append(line)
-#			troposinex.seek(0)
-#			troposinex.truncate()
-#			troposinex.write("".join(content))
-			troposinex.close()
-
+		# create result as dictonary
+		result = {
+			'stattion_name': station[''],
+			'temp' : temp,
+			'press': press,
+			'rain' : rain,
+			'zhd'  : zhd	
+			}
 
 	except Exception as e:
 		sys.stderr.write('Error occured in process_station_tro: {error}'.format(error = repr(e)))
@@ -511,18 +485,17 @@ def main(argv):
 			if (i0 >= 0 and i0 <= south_north) and ( j0 >= 0 and j0 <= south_north) \
 				and ( (country == 'All') \
 				or (country == station['country']) ):
-					try:
-						if output == 'db':
-							process_station(db, cur, station, ncfile, date)
-						elif output == 'tro':
-							process_station_tro(station, ncfile, date)
-						elif output != {'db','tro'}:
-							print 'Error: Not a possible output! (Possible options for -o <output> are "db" and "tro".)'
-							sys.exit()
-					except Exception as e:	
-						print ('Error in output - Failed to process stations: {0}'.format(e))
-						sys.exit(1)
-
+					if output == 'db':
+						process_station(db, cur, station, ncfile, date)
+					elif output == 'tro':
+						# save result in tropo_station_data
+						tropo_station_data = process_station_tro(station, ncfile, date)
+						# if tropo_station_data is not None append to data list
+						if tropo_station_data:
+							data.append(tropo_station_data)
+		if output == 'tro':
+			pass
+			# remove pass and add tropo_out 
 	if not(len(flist)):
 		print 'No candidates for import files found ...'
 		sys.exit(1)

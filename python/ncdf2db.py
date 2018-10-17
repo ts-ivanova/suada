@@ -320,22 +320,18 @@ def process_station_tro(station, ncfile, date):
 
 
 # Define a procedure that exports the accumulated data into txt format:
-#def tropo_out(station, ncfile, date):
-#	result = True
-#	try:
-#		# Insert values of parameters in txt format:
-#		with open('troposinex.txt', 'r+') as troposinex:
-#			for line in troposinex:
-#				onedim.append(line)
-#			troposinex.seek(0)
-#			troposinex.truncate()
-#			troposinex.write("".join(content))
-#			troposinex.close
-#
-#	except Exception as e: 
-#		sys.stderr.write('Error occured in tropo_out: {error}'.format(error = repr(e)))
-#	finally:
-#		return result
+def tropo_out(station, ncfile, date):
+	result = True
+	try:
+		# Insert values of parameters in txt format:
+		troposinex = open('troposinex.txt', 'w')
+		troposinex.write(data)
+		troposinex.write("footer")
+		troposinex.close()
+	except Exception as e: 
+		sys.stderr.write('Error occured in tropo_out: {error}'.format(error = repr(e)))
+	finally:
+		return result
 
 
 
@@ -466,6 +462,7 @@ def main(argv):
 		west_east = ncfile.getncattr('WEST-EAST_GRID_DIMENSION')
 		south_north = ncfile.getncattr('SOUTH-NORTH_GRID_DIMENSION')
 
+
 		# Empty list to contain data:
 		data = []
 		for station in stations:
@@ -481,7 +478,7 @@ def main(argv):
 			i0 = south_north / 2 + indx[1] - 1
 			station['i0'] = i0
 			station['j0'] = j0
-
+	
 			if (i0 >= 0 and i0 <= south_north) and ( j0 >= 0 and j0 <= south_north) \
 				and ( (country == 'All') \
 				or (country == station['country']) ):
@@ -494,8 +491,10 @@ def main(argv):
 						if tropo_station_data:
 							data.append(tropo_station_data)
 		if output == 'tro':
-			pass
-			# remove pass and add tropo_out 
+			tropo_out(station, ncfile, date)
+			# pass
+			# remove pass and add tropo_out
+
 	if not(len(flist)):
 		print 'No candidates for import files found ...'
 		sys.exit(1)

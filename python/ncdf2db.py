@@ -309,7 +309,7 @@ def process_station_tro(station, ncfile, date):
 			'temp' : temp,
 			'press': press,
 			'rain' : rain,
-			'zhd'  : zhd	
+			'zhd'  : zhd
 			}
 
 	except Exception as e:
@@ -325,10 +325,50 @@ def tropo_out(station, ncfile, date):
 	try:
 		# Insert values of parameters in txt format:
 		troposinex = open('troposinex.txt', 'w')
+
+		troposinex.write('%=TRO \
+\n \
+\n *--------------------------- \
+\n +FILE/REFERENCE \
+\n *INFO_TYPE_____ \
+\n INFO_____ \
+\n DESCRIPTION	SUGAC \
+\n OUTPUT			SUGAC \
+\n CONTACT		GUEROVA \
+\n SOFTWARE		WRFv3.7.1 \
+\n -FILE/REFERENCE \
+\n \
+\n *--------------------------- \
+\n +TROP/DESCRIPTION \
+\n \
+\n -TROP/DESCRIPTION \
+\n \
+\n *-------- \
+\n +SITE/ID \
+\n \
+\n -SITE/ID \
+\n \
+\n *--------------------------- \
+\n +SITE/COORDINATES \
+\n *STATION \
+\n \
+\n -SITE/COORDINATES \
+\n \
+\n *--------------------------- \
+\n +TROP/SOLUTION \
+\n \
+')
+
 		troposinex.write(data)
-		troposinex.write("footer")
+
+		troposinex.write(' \n \
+\n -TROP/SOLUTION \
+\n \
+\n %=ENDTRO \
+\n \
+')
 		troposinex.close()
-	except Exception as e: 
+	except Exception as e:
 		sys.stderr.write('Error occured in tropo_out: {error}'.format(error = repr(e)))
 	finally:
 		return result
@@ -352,9 +392,9 @@ def main(argv):
 	source_name = ''
 	country = 'All' # By default: 'All'. Possible options are 'BG', 'GR', ...
 	env = '' # possible options are 'dev' and 'prod'.
-	output = 'db' # By default: 'db'. Possible options: 'db', 'tro'.  
+	output = 'db' # By default: 'db'. Possible options: 'db', 'tro'.
 	instrument_name = 'GNSS'
-	
+
 	try:
 		opts, args = getopt.getopt(argv,"h:b:p:s:c:d:o",["basedir=","prefix=","source_name=","country=","env=","output="])
 	except getopt.GetoptError:
@@ -478,7 +518,7 @@ def main(argv):
 			i0 = south_north / 2 + indx[1] - 1
 			station['i0'] = i0
 			station['j0'] = j0
-	
+
 			if (i0 >= 0 and i0 <= south_north) and ( j0 >= 0 and j0 <= south_north) \
 				and ( (country == 'All') \
 				or (country == station['country']) ):

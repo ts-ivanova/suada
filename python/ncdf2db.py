@@ -305,13 +305,14 @@ def process_station_tro(station, ncfile, date):
                               zhd))
 		# create result as dictonary
 		result = {
-			'stattion_name': station[''],
+			'station_name': station[''],
 			'temp' : temp,
 			'press': press,
 			'rain' : rain,
 			'zhd'  : zhd
 			}
-
+#		result as list?
+#		result = [stationName, temp, press, rain, zhd]		
 	except Exception as e:
 		sys.stderr.write('Error occured in process_station_tro: {error}'.format(error = repr(e)))
 	finally:
@@ -324,9 +325,8 @@ def tropo_out(station, ncfile, date):
 	result = True
 	try:
 		# Insert values of parameters in txt format:
-		troposinex = open('troposinex.txt', 'w')
-
-		troposinex.write('%=TRO \
+		with open('troposinex.txt', 'w') as troposinex:
+			troposinex.write('%=TRO \
 \n \
 \n *--------------------------- \
 \n +FILE/REFERENCE \
@@ -358,16 +358,16 @@ def tropo_out(station, ncfile, date):
 \n +TROP/SOLUTION \
 \n \
 ')
-
-		troposinex.write(data)
-
-		troposinex.write(' \n \
+			troposinex.write(str(station_data))
+#			for item in station_data:
+#				troposinex.write('{}\n'.format(item))
+			troposinex.write(' \n \
 \n -TROP/SOLUTION \
 \n \
 \n %=ENDTRO \
 \n \
 ')
-		troposinex.close()
+			troposinex.close()
 	except Exception as e:
 		sys.stderr.write('Error occured in tropo_out: {error}'.format(error = repr(e)))
 	finally:
@@ -392,7 +392,7 @@ def main(argv):
 	source_name = ''
 	country = 'All' # By default: 'All'. Possible options are 'BG', 'GR', ...
 	env = '' # possible options are 'dev' and 'prod'.
-	output = 'db' # By default: 'db'. Possible options: 'db', 'tro'.
+	output = 'db' # By default: 'db'. Possible options: 'db' (write to SUADA db), 'tro' (write to troposinex txt format).
 	instrument_name = 'GNSS'
 
 	try:
@@ -504,7 +504,7 @@ def main(argv):
 
 
 		# Empty list to contain data:
-		data = []
+		station_data = []
 		for station in stations:
 			stationName = station['name']
 			stationId = station['id']
@@ -528,8 +528,10 @@ def main(argv):
 						# save result in tropo_station_data
 						tropo_station_data = process_station_tro(station, ncfile, date)
 						# if tropo_station_data is not None append to data list
+			#			print ('result is {0} ').format(data)
+
 						if tropo_station_data:
-							data.append(tropo_station_data)
+							station_data.append(tropo_station_data.copy())
 		if output == 'tro':
 			tropo_out(station, ncfile, date)
 			# pass

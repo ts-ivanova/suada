@@ -17,7 +17,7 @@ import MySQLdb
 import databaseconfig as cfg
 import numpy as np
 import wrf
-import re
+
 
 # Define global variables
 t_kelvin = 273.15
@@ -278,12 +278,12 @@ def process_station_tro(station, ncfile, date):
 	        HAILNC = ncfile.variables['HAILNC'][0]
 	        Precipitation = RAINNC + SNOWNC + GRAUPELNC + HAILNC
 	        # 3D fields:
-	        T = ncfile.variables['T'][0]
-	        P = ncfile.variables['P'][0]
-	        PB = ncfile.variables['PB'][0]
-	        PHB = ncfile.variables['PHB'][0]
-	        PH = ncfile.variables['PH'][0]
-	        QVAPOR = ncfile.variables['QVAPOR'][0]
+#	        T = ncfile.variables['T'][0]
+#	        P = ncfile.variables['P'][0]
+#	        PB = ncfile.variables['PB'][0]
+#	        PHB = ncfile.variables['PHB'][0]
+#	        PH = ncfile.variables['PH'][0]
+#	        QVAPOR = ncfile.variables['QVAPOR'][0]
 
 		# Import 1D fields
                 press = Pressure[i0][j0]/100.
@@ -305,14 +305,14 @@ def process_station_tro(station, ncfile, date):
                               zhd))
 		# create result as dictonary
 		result = {
-			'station_name': station[''],
+			'station_name': station['name'],
 			'temp' : temp,
 			'press': press,
 			'rain' : rain,
 			'zhd'  : zhd
 			}
-#		result as list?
-#		result = [stationName, temp, press, rain, zhd]		
+		# result as list would be the following:
+		# result = [station['name'], temp, press, rain, zhd]
 	except Exception as e:
 		sys.stderr.write('Error occured in process_station_tro: {error}'.format(error = repr(e)))
 	finally:
@@ -321,11 +321,12 @@ def process_station_tro(station, ncfile, date):
 
 
 # Define a procedure that exports the accumulated data into txt format:
-def tropo_out(station, ncfile, date):
+def tropo_out(): #(station, ncfile, date):
+
 	result = True
 	try:
 		# Insert values of parameters in txt format:
-		with open('troposinex.txt', 'w') as troposinex:
+		with open('troposinex.txt', 'w+') as troposinex:
 			troposinex.write('%=TRO \
 \n \
 \n *--------------------------- \
@@ -358,9 +359,7 @@ def tropo_out(station, ncfile, date):
 \n +TROP/SOLUTION \
 \n \
 ')
-			troposinex.write(str(station_data))
-#			for item in station_data:
-#				troposinex.write('{}\n'.format(item))
+			troposinex.write(station_data)
 			troposinex.write(' \n \
 \n -TROP/SOLUTION \
 \n \
@@ -398,7 +397,7 @@ def main(argv):
 	try:
 		opts, args = getopt.getopt(argv,"h:b:p:s:c:d:o",["basedir=","prefix=","source_name=","country=","env=","output="])
 	except getopt.GetoptError:
-		print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+'] -o <output> ['+output+']'
+		print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+'] -o <output> ['+str(output)+']'
 		sys.exit(2)
 	for opt, arg in opts:
 		if opt == '-h':
@@ -419,7 +418,7 @@ def main(argv):
 			env = str(arg)
 		elif opt in ("-o", "--output"):
 			if output:
-				output = str(output)
+				output = str(arg)
 			else:
 				output = 'db'
 
@@ -432,6 +431,10 @@ def main(argv):
 	if env == '':
 		print 'Error: You must specify the database! (-d <env>)'
 		sys.exit()
+
+#	if output != {'db','tro'}:
+#		print ('Error: Not a possible output -o !')
+#		sys.exit()
 
 	# Retrieve the list of all data files
 	# starting with [prefix] inside [basedir] folder
@@ -461,7 +464,7 @@ def main(argv):
 		print('Failed to establish connection: {0}'.format(e))
 		cur.close()
 		sys.exit(1)
-
+			
 	# Fetching source_id...
 	print('Trying to fetch the source_id ...')
 	source_id = get_source_id(cur, source_name)
@@ -519,23 +522,22 @@ def main(argv):
 			station['i0'] = i0
 			station['j0'] = j0
 
-			if (i0 >= 0 and i0 <= south_north) and ( j0 >= 0 and j0 <= south_north) \
-				and ( (country == 'All') \
-				or (country == station['country']) ):
-					if output == 'db':
-						process_station(db, cur, station, ncfile, date)
-					elif output == 'tro':
-						# save result in tropo_station_data
-						tropo_station_data = process_station_tro(station, ncfile, date)
-						# if tropo_station_data is not None append to data list
-			#			print ('result is {0} ').format(data)
 
-						if tropo_station_data:
-							station_data.append(tropo_station_data.copy())
+			if (i0 >= 0 and i0 <= south_north) and ( j0 >= 0 and j0 <= south_north) and ( (country == 'All') or (country == station['country'])):
+				if output == 'db':
+					process_station(db, cur, station, ncfile, date)
+					print ('output is db')
+				elif output == 'tro':
+					# save result in tropo_station_data
+					tropo_station_data = process_station_tro(station, ncfile, date)
+					# if tropo_station_data is not None append to data list
+					if tropo_station_data:
+						station_data.append(tropo_station_data.copy())
+					print ('output is tro')
 		if output == 'tro':
-			tropo_out(station, ncfile, date)
 			# pass
 			# remove pass and add tropo_out
+			tropo_out(tropo_station_data)
 
 	if not(len(flist)):
 		print 'No candidates for import files found ...'

@@ -321,7 +321,7 @@ def process_station_tro(station, ncfile, date):
 
 
 # Define a procedure that exports the accumulated data into txt format:
-def tropo_out(): #(station, ncfile, date):
+def tropo_out(tropo_station_data): #(station, ncfile, date):
 
 	result = True
 	try:
@@ -464,7 +464,7 @@ def main(argv):
 		print('Failed to establish connection: {0}'.format(e))
 		cur.close()
 		sys.exit(1)
-			
+
 	# Fetching source_id...
 	print('Trying to fetch the source_id ...')
 	source_id = get_source_id(cur, source_name)

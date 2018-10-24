@@ -277,13 +277,6 @@ def process_station_tro(station, ncfile, date):
 	        GRAUPELNC = ncfile.variables['GRAUPELNC'][0]
 	        HAILNC = ncfile.variables['HAILNC'][0]
 	        Precipitation = RAINNC + SNOWNC + GRAUPELNC + HAILNC
-	        # 3D fields:
-#	        T = ncfile.variables['T'][0]
-#	        P = ncfile.variables['P'][0]
-#	        PB = ncfile.variables['PB'][0]
-#	        PHB = ncfile.variables['PHB'][0]
-#	        PH = ncfile.variables['PH'][0]
-#	        QVAPOR = ncfile.variables['QVAPOR'][0]
 
 		# Import 1D fields
                 press = Pressure[i0][j0]/100.
@@ -303,6 +296,7 @@ def process_station_tro(station, ncfile, date):
                               rain,
                               pblh,
                               zhd))
+
 		# create result as dictonary
 		result = {
 			'station_name': station['name'],
@@ -311,22 +305,21 @@ def process_station_tro(station, ncfile, date):
 			'rain' : rain,
 			'zhd'  : zhd
 			}
-		# result as list would be the following:
-		# result = [station['name'], temp, press, rain, zhd]
+
 	except Exception as e:
 		sys.stderr.write('Error occured in process_station_tro: {error}'.format(error = repr(e)))
+#		result = False
 	finally:
 		return result
 
 
 
 # Define a procedure that exports the accumulated data into txt format:
-def tropo_out(tropo_station_data): #(station, ncfile, date):
-
+def tropo_out(station_data):
 	result = True
 	try:
 		# Insert values of parameters in txt format:
-		with open('troposinex.txt', 'w+') as troposinex:
+		with open('troposinex.txt', 'w') as troposinex:
 			troposinex.write('%=TRO \
 \n \
 \n *--------------------------- \
@@ -359,7 +352,8 @@ def tropo_out(tropo_station_data): #(station, ncfile, date):
 \n +TROP/SOLUTION \
 \n \
 ')
-			troposinex.write(station_data)
+			for station in station_data:
+				troposinex.write('station_name: {0}, temp: {1}, press: {2}, rain: {3}, zhd: {4}'.format(station['name'], temp, press, rain, zhd))
 			troposinex.write(' \n \
 \n -TROP/SOLUTION \
 \n \
@@ -367,8 +361,10 @@ def tropo_out(tropo_station_data): #(station, ncfile, date):
 \n \
 ')
 			troposinex.close()
+
 	except Exception as e:
 		sys.stderr.write('Error occured in tropo_out: {error}'.format(error = repr(e)))
+		result = False
 	finally:
 		return result
 
@@ -534,10 +530,10 @@ def main(argv):
 					if tropo_station_data:
 						station_data.append(tropo_station_data.copy())
 					print ('output is tro')
-		if output == 'tro':
+		if output == 'tro' and len(station_data)>0:
 			# pass
 			# remove pass and add tropo_out
-			tropo_out(tropo_station_data)
+			tropo_out(station_data)
 
 	if not(len(flist)):
 		print 'No candidates for import files found ...'

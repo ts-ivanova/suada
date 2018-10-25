@@ -4,3 +4,4 @@ wrfout*
 python/databaseconfig.py
 python/databaseconfig.pyc
 python/ncdf2db-tst.py
+troposinex.txt

@@ -321,44 +321,56 @@ def tropo_out(station_data):
 		# Insert values of parameters in txt format:
 		with open('troposinex.txt', 'w') as troposinex:
 			troposinex.write('%=TRO \
-\n \
-\n *--------------------------- \
-\n +FILE/REFERENCE \
-\n *INFO_TYPE_____ \
-\n INFO_____ \
-\n DESCRIPTION	SUGAC \
-\n OUTPUT			SUGAC \
-\n CONTACT		GUEROVA \
-\n SOFTWARE		WRFv3.7.1 \
-\n -FILE/REFERENCE \
-\n \
-\n *--------------------------- \
-\n +TROP/DESCRIPTION \
-\n \
-\n -TROP/DESCRIPTION \
-\n \
-\n *-------- \
-\n +SITE/ID \
-\n \
-\n -SITE/ID \
-\n \
-\n *--------------------------- \
-\n +SITE/COORDINATES \
-\n *STATION \
-\n \
-\n -SITE/COORDINATES \
-\n \
-\n *--------------------------- \
-\n +TROP/SOLUTION \
-\n \
+\n\
+\n*--------------------------- \
+\n+FILE/REFERENCE \
+\n*INFO_TYPE_____ \
+\nINFO_____ \
+\nDESCRIPTION	SUGAC \
+\nOUTPUT			SUGAC \
+\nCONTACT		GUEROVA \
+\nSOFTWARE		WRFv3.7.1 \
+\n-FILE/REFERENCE \
+\n\
+\n*--------------------------- \
+\n+TROP/DESCRIPTION \
+\n\
+\n-TROP/DESCRIPTION \
+\n\
+\n*-------- \
+\n+SITE/ID \
+\n\
+\n-SITE/ID \
+\n\
+\n*--------------------------- \
+\n+SITE/COORDINATES \
+\n*STATION \
+\n\
+\n-SITE/COORDINATES \
+\n\
+\n*--------------------------- \
+\n+TROP/SOLUTION \
+\n*STATION__ ____EPOCH___ TRODRY PRESS_ _TEMP _HUMI \
 ')
 			for station in station_data:
-				troposinex.write('station_name: {0}, temp: {1}, press: {2}, rain: {3}, zhd: {4}'.format(station['name'], temp, press, rain, zhd))
+				#print(	'{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f}'
+				troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f}'
+					.format(
+					name=station['station_name'][:10],
+					epoch='YY:DDD:SSSSS',
+					trodry=station['zhd'],
+					press=station['press'], 
+					temp=station['temp']+t_kelvin, #should be converted to Kelvin
+					humi=0.0 #set to zero since is not provided
+				))
+			#for station in station_data:
+			#	troposinex.write('station_name: {0}, temp: {1}, press: {2}, rain: {3}, zhd: {4}'.format(station['name'], temp, press, rain, zhd))
+			#	print('station_name: {0}, temp: {1}, press: {2}, rain: {3}, zhd: {4}'.format(station['name'], temp, press, rain, zhd))
 			troposinex.write(' \n \
-\n -TROP/SOLUTION \
-\n \
-\n %=ENDTRO \
-\n \
+\n-TROP/SOLUTION \
+\n\
+\n%=ENDTRO \
+\n\
 ')
 			troposinex.close()
 
@@ -391,7 +403,7 @@ def main(argv):
 	instrument_name = 'GNSS'
 
 	try:
-		opts, args = getopt.getopt(argv,"h:b:p:s:c:d:o",["basedir=","prefix=","source_name=","country=","env=","output="])
+		opts, args = getopt.getopt(argv,"h:b:p:s:c:d:o:",["basedir=","prefix=","source_name=","country=","env=","output="])
 	except getopt.GetoptError:
 		print 'ncdf2db.py -b <basedir> ['+basedir+'] -p <prefix> ['+prefix+'] -s <source_name> ['+str(source_name)+'] -c <country> ['+str(country)+'] -d <env> ['+str(env)+'] -o <output> ['+str(output)+']'
 		sys.exit(2)
@@ -413,10 +425,7 @@ def main(argv):
 		elif opt in ("-d", "--env"):
 			env = str(arg)
 		elif opt in ("-o", "--output"):
-			if output:
-				output = str(arg)
-			else:
-				output = 'db'
+			output = str(arg)
 
 	# Check whether the user has specified source name. If not -> Error.
 	if source_name == '':
@@ -428,9 +437,9 @@ def main(argv):
 		print 'Error: You must specify the database! (-d <env>)'
 		sys.exit()
 
-#	if output != {'db','tro'}:
-#		print ('Error: Not a possible output -o !')
-#		sys.exit()
+	if not output in {'db', 'tro'}:
+		print ('Error: Not a possible output {}'.format(output))
+		sys.exit()
 
 	# Retrieve the list of all data files
 	# starting with [prefix] inside [basedir] folder
@@ -522,14 +531,12 @@ def main(argv):
 			if (i0 >= 0 and i0 <= south_north) and ( j0 >= 0 and j0 <= south_north) and ( (country == 'All') or (country == station['country'])):
 				if output == 'db':
 					process_station(db, cur, station, ncfile, date)
-					print ('output is db')
 				elif output == 'tro':
 					# save result in tropo_station_data
 					tropo_station_data = process_station_tro(station, ncfile, date)
 					# if tropo_station_data is not None append to data list
 					if tropo_station_data:
 						station_data.append(tropo_station_data.copy())
-					print ('output is tro')
 		if output == 'tro' and len(station_data)>0:
 			# pass
 			# remove pass and add tropo_out

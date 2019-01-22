@@ -136,6 +136,8 @@ def process_station(db, cur, station, ncfile, date):
 	        PHB = ncfile.variables['PHB'][0]
 	        PH = ncfile.variables['PH'][0]
 	        QVAPOR = ncfile.variables['QVAPOR'][0]
+#		WIND3D = ncfile.variables['WIND'][0]
+#		also for wind1D, wv_mixing_ratio_1D
 
 		# Import 1D fields
                 press = Pressure[i0][j0]/100.
@@ -145,7 +147,10 @@ def process_station(db, cur, station, ncfile, date):
                 pblh = PBLH[i0][j0]
                 temp = T2[i0][j0]-t_kelvin
                 rain = Precipitation[i0][j0]
-                print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
+#		Wind1D = Wind[i0][j0]              
+#		wv_mixing_ratio_1D = QVAPOR[i0][j0]
+
+		print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
                       .format(station['name'],
                               x0,
                               y0,
@@ -159,6 +164,7 @@ def process_station(db, cur, station, ncfile, date):
                 # SQL commands that insert values of parameters in the tables.
                 # If there is a dublicate, the existing fileds are updated.
                 # 1D data insertion:
+		# add additionaly wind and 1d mixing ratio
                 cur.execute ( "insert into NWP_IN_1D (Datetime, \
 			Temperature, \
 			Pressure, \
@@ -210,8 +216,10 @@ def process_station(db, cur, station, ncfile, date):
                         # (100.*Pair) is again in [Pa], because in the formula for tk it should be in [Pa].
 			QV = QVAPOR[k][i0][j0] # water vapour mixing ratio
                     	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
+#			Wind3D = WIND[k][i0][j0]
 
                         #3D data insert:
+			# add additionally for wind
 			cur.execute ( "insert into NWP_IN_3D (Datetime, \
 				Temperature, \
 				Pressure, \

@@ -5,7 +5,15 @@
 # 2017, 2018
 
 # Aim of the python scripts in this project: to export the data from
-# the WRF model stored in netCDF format to a SUADA database (in NWP 1D and 3D tables).
+# the WRF model stored in netCDF format to a SUADA database 
+# (in NWP 1D and 3D tables).
+
+# http://suada.phys.uni-sofia.bg/
+# The Sofia University Data Archive (SUADA) serves 
+# as a regional database for atmospheric parameters, 
+# specifically for Integrated Water Vapour (IWV), 
+# derived using the Global Navigation Satellite Systems (GNSS) 
+# Meteorology method.
 
 import sys, getopt
 import glob
@@ -23,8 +31,9 @@ import wrf
 t_kelvin = 273.15
 
 
-# Define a procedure that selects the stations' ID, Name, Longitude,
-# Latitude, Altitude from the SUADA information tables:
+# Define a procedure that selects the stations' 
+# ID, Name, Longitude, Latitude, Altitude 
+# from the SUADA information tables:
 def getstations(cur, source_name, country, instrument_name):
 	stations=[]
 	try:
@@ -88,8 +97,10 @@ def get_source_id(cur, source_name):
 	finally:
 		return source_id
 
-# Define a procedure that takes the country (that the user specified when running the script)
-# as an argument and returns the station names in this country as a result:
+# Define a procedure that takes the country 
+# (that the user specified when running the script)
+# as an argument and returns the station names 
+# in this country as a result:
 def get_station_name(cur, country):
 	name = -1
 	try:
@@ -106,7 +117,8 @@ def get_station_name(cur, country):
 	finally:
 		return name
 
-# Define a procedure that inserts model data for each station into the SUADA database:
+# Define a procedure that inserts model data for each station 
+# into the SUADA database:
 def process_station(db, cur, station, ncfile, date):
 	result = True
 	try:
@@ -161,8 +173,10 @@ def process_station(db, cur, station, ncfile, date):
                               pblh,
                               zhd))
 
-                # SQL commands that insert values of parameters in the tables.
-                # If there is a dublicate, the existing fileds are updated.
+                # SQL commands that insert values 
+		# of parameters in the tables.
+                # If there is a dublicate, the existing fileds 
+		# are updated.
                 # 1D data insertion:
 		# add additionaly wind and 1d mixing ratio
                 cur.execute ( "insert into NWP_IN_1D (Datetime, \
@@ -204,17 +218,26 @@ def process_station(db, cur, station, ncfile, date):
                 # 3D data insertion:
 		bottom_top = len(T)
                 # First, calculation of tk:
-		# Rd, Cp, Rd_Cp are used for 3D calculation of tk (absolute temperature [K], and then it's converted to [C]):
+		# Rd, Cp, Rd_Cp are used for 3D calculation of 
+		# tk (absolute temperature [K], and then 
+		# it's converted to [C]):
                 Rd  = 287.0
 		Cp  = 7.0 * Rd / 2.0
 		Rd_Cp  = Rd / Cp # dimensionless
                 for k in range(0, bottom_top):
-			theta = T[k][i0][j0] + 300. # [K]
-			Pair = (P[k][i0][j0] + PB[k][i0][j0])/100. # Press3D = Pair/100.0 [hPa]
-                        # P is perturbation pressure; PB is base state pressure
-			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - t_kelvin # (... - t_kelvin) converts T to Celsius.
-                        # (100.*Pair) is again in [Pa], because in the formula for tk it should be in [Pa].
-			QV = QVAPOR[k][i0][j0] # water vapour mixing ratio
+			theta = T[k][i0][j0] + 300. 
+			# [K]
+			Pair = (P[k][i0][j0] + PB[k][i0][j0])/100. 
+			# Press3D = Pair/100.0 [hPa]
+                        
+			# P is perturbation pressure; 
+			# PB is base state pressure
+			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - t_kelvin 
+			# (... - t_kelvin) converts T to Celsius.
+                        # (100.*Pair) is again in [Pa], because 
+			# in the formula for tk it should be [Pa].
+			QV = QVAPOR[k][i0][j0] 
+			# QV is water vapour mixing ratio
                     	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
 #			Wind3D = WIND[k][i0][j0]
 
@@ -253,7 +276,8 @@ def process_station(db, cur, station, ncfile, date):
 				QV,
 				k]) # insert or update
 
-		db.commit() # commit all data to the specified -d <env>
+		db.commit() 
+		# commits all data to the specified -d <env>
 
 	except Exception as e:
 		sys.stderr.write('Error occured in process_station: {error}'.format(error = repr(e)))
@@ -262,7 +286,8 @@ def process_station(db, cur, station, ncfile, date):
 
 
 
-# Define a procedure that accumulates data for each station:
+# Define a procedure that accumulates data for each station
+# in a dictionary so that it can later be inserted into txt format:
 def process_station_tro(station, ncfile, date):
 	result = True
 	try:
@@ -305,7 +330,7 @@ def process_station_tro(station, ncfile, date):
                               pblh,
                               zhd))
 
-		# create result as dictonary
+		# Create result as dictonary:
 		result = {
 			'station_name': station['name'],
 			'temp' : temp,
@@ -316,13 +341,14 @@ def process_station_tro(station, ncfile, date):
 
 	except Exception as e:
 		sys.stderr.write('Error occured in process_station_tro: {error}'.format(error = repr(e)))
-#		result = False
 	finally:
 		return result
 
 
 
-# Define a procedure that exports the accumulated data into txt format:
+# Define a procedure that exports the accumulated data 
+# from process_station_tro() procedure  into 
+# TROPOSINEX txt format:
 def tropo_out(station_data):
 	result = True
 	try:
@@ -390,24 +416,47 @@ def tropo_out(station_data):
 
 
 
-# Define the main procedure:
+# Define the main procedure that checks whether the command
+# that the user typed in the terminal is correct. Then it has to
+# create a db connection; to fetch source_id by calling 
+# the procedure get_source_id; then call the procedure 
+# getstations that selects the stations' information 
+# from the SUADA information tables. (The SUADA information tables 
+# are: INSTRUMENT, STATION, COORDINATE, SENSOR and SOURCE.) 
+# Then to iterate through all stations that satisfy the conditions 
+# that the user specified and to obtain model data. 
+# Lastly, depending on the user's choice on -o <output> 
+# (either -o db or -o tro), the process_station or 
+# process_station_tro procedure is called. 
+# The process_station procedure inserts the model data 
+# into a SUADA database. The process_station_tro generates 
+# a dictionary that will be exported to txt format.
+
 def main(argv):
-	# Optional for the user to specify are the following parameters:
+	# Optional for the user to specify are the following 
+	# parameters:
 	# -b <basedir>
 	# -p <prefix>
-	# -c <country> - the country in which all stations will be iterated through.
-	# (If not specified - the script iterates through all countries.)
+	# -c <country> - the country in which all stations 
+	# will be iterated through.
+	# (If not specified - the script iterates through 
+	# all countries.)
 	# Mandatory for the user to specify are the following:
-	# -s <source_name> - each user has a specific source_name that he/she should know
-	# (if not, see Instructions, point 7).
-	# -d <env> - the environment in which the data from the WRF model is going to be stored.
-	# -o <output> - either insert data into database or export it to txt fomrat.
+	# -s <source_name> - each user has a specific source_name 
+	# that they should know (if not, see Instructions, point 7).
+	# -d <env> - the environment in which the data from the 
+	# WRF model is going to be stored.
+	# -o <output> - either insert data into database or 
+	# export it to txt fomrat.
 	basedir='./'
 	prefix='wrfout_d02'
 	source_name = ''
-	country = 'All' # By default: 'All'. Possible options are 'BG', 'GR', ...
+	country = 'All' # By default: 'All'. 
+	# Possible options are 'BG', 'GR', ...
 	env = '' # possible options are 'dev' and 'prod'.
-	output = 'db' # By default: 'db'. Possible options: 'db' (write to SUADA db), 'tro' (write to troposinex txt format).
+	output = 'db' # By default: 'db'. 
+	# Possible options: 'db' (write to SUADA db), 
+	# 'tro' (write to troposinex txt format).
 	instrument_name = 'GNSS'
 
 	try:
@@ -435,12 +484,14 @@ def main(argv):
 		elif opt in ("-o", "--output"):
 			output = str(arg)
 
-	# Check whether the user has specified source name. If not -> Error.
+	# Check whether the user has specified source name. 
+	# If not -> Error.
 	if source_name == '':
 		print 'Error: You must specify the source name! (-s <source_name>)'
 		sys.exit()
 
-	# Check whether the user has specified the database. If not -> Error.
+	# Check whether the user has specified the database. 
+	# If not -> Error.
 	if env == '':
 		print 'Error: You must specify the database! (-d <env>)'
 		sys.exit()
@@ -487,8 +538,8 @@ def main(argv):
 
 	print('Source id: {} found for source name: {}'.format(source_id, source_name))
 
-	# Call the procedure that selects the stations' information from the SUADA information tables:
-	# (The SUADA information tables are: INSTRUMENT, STATION, COORDINATE, SENSOR and SOURCE.)
+	# Call the procedure that selects the stations' information
+	# from the SUADA information tables:
 	print('Get stations')
 	stations = getstations(cur, source_name, country, instrument_name)
 
@@ -540,9 +591,12 @@ def main(argv):
 				if output == 'db':
 					process_station(db, cur, station, ncfile, date)
 				elif output == 'tro':
-					# save result in tropo_station_data
+					# save result in 
+					# tropo_station_data
 					tropo_station_data = process_station_tro(station, ncfile, date)
-					# if tropo_station_data is not None append to data list
+					# if tropo_station_data is 
+					# not None, 
+					# append to data list
 					if tropo_station_data:
 						station_data.append(tropo_station_data.copy())
 		if output == 'tro' and len(station_data)>0:

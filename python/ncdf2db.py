@@ -566,8 +566,8 @@ def main(argv):
 		stand_lon= ncfile.STAND_LON
 		dx = ncfile.DX
 		dy = ncfile.DY
-		west_east = ncfile.getncattr('WEST-EAST_GRID_DIMENSION')
-		south_north = ncfile.getncattr('SOUTH-NORTH_GRID_DIMENSION')
+		west_east = ncfile.dimensions['west_east'].size
+		south_north = ncfile.dimensions['south_north'].size
 
 
 		# Empty list to contain data:
@@ -587,7 +587,7 @@ def main(argv):
 			station['j0'] = j0
 
 
-			if (i0 >= 0 and i0 <= south_north) and ( j0 >= 0 and j0 <= south_north) and ( (country == 'All') or (country == station['country'])):
+			if (i0 >= 0 and i0 < south_north) and ( j0 >= 0 and j0 < west_east) and ( (country == 'All') or (country == station['country'])):
 				if output == 'db':
 					process_station(db, cur, station, ncfile, date)
 				elif output == 'tro':

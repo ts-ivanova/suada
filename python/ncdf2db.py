@@ -136,7 +136,7 @@ def process_station(db, cur, station, ncfile, date):
         	Pressure = ncfile.variables['PSFC'][0]
 	        PBLH = ncfile.variables['PBLH'][0]
 	        HGT = ncfile.variables['HGT'][0]
-	        RAINNC = ncfile.variables['RAINNC'][0]
+                RAINNC = ncfile.variables['RAINNC'][0]
 	        SNOWNC = ncfile.variables['SNOWNC'][0]
 	        GRAUPELNC = ncfile.variables['GRAUPELNC'][0]
 	        HAILNC = ncfile.variables['HAILNC'][0]
@@ -220,21 +220,36 @@ def process_station(db, cur, station, ncfile, date):
                 Rd  = 287.0
 		Cp  = 7.0 * Rd / 2.0
 		Rd_Cp  = Rd / Cp # dimensionless
+                Rv = 461.51
                 for k in range(0, bottom_top):
-			theta = T[k][i0][j0] + 300. 
 			# [K]
-			Pair = (P[k][i0][j0] + PB[k][i0][j0])/100. 
+			theta = T[k][i0][j0] + 300.
 			# Press3D = Pair/100.0 [hPa]
                         
 			# P is perturbation pressure; 
 			# PB is base state pressure
-			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - t_kelvin 
+			Pair = (P[k][i0][j0] + PB[k][i0][j0])/100.
 			# (... - t_kelvin) converts T to Celsius.
-                        # (100.*Pair) is again in [Pa], because 
+                        # (100.*Pair) is again in [Pa], because
 			# in the formula for tk it should be [Pa].
-			QV = QVAPOR[k][i0][j0] 
+			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - t_kelvin
 			# QV is water vapour mixing ratio
+			QV = QVAPOR[k][i0][j0]
+                        #
                     	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
+                        # IWV calculation
+                        # equations are borrowed from modelf.m
+                        # it is unclear how exactly the pressure and delta_height are defined
+                        # assuming pressure[z] = P[z][i0][j0] ('P' field from wrf output)
+                        if k <= 42:
+                            q1 = QVAPOR[k][i0][j0]   / ( QVAPOR[k][i0][j0]   + 1. )
+                            q2 = QVAPOR[k+1][i0][j0] / ( QVAPOR[k+1][i0][j0] + 1. )
+                            e_k   = ( P[k][i0][j0]   * q1 ) / ( 0.622 + ( 0.378 * q1 ))
+                            e_kp1 = ( P[k+1][i0][j0] * q2 ) / ( 0.622 + ( 0.378 * q2 ))
+                            ro_k   = e_k   / ( Rv * T[k][i0][j0]  )
+                            ro_kp1 = e_kp1 / ( Rv * T[k+1][i0][j0]  )
+                            delta_height = 
+                            IWV = ( ro_k + ro_kp1) * delta_height / 2 
 
                         #3D data insert:
 			cur.execute ( "insert into NWP_IN_3D (Datetime, \
@@ -299,7 +314,7 @@ def process_station_tro(station, ncfile, date):
         	Pressure = ncfile.variables['PSFC'][0]
 	        PBLH = ncfile.variables['PBLH'][0]
 	        HGT = ncfile.variables['HGT'][0]
-	        RAINNC = ncfile.variables['RAINNC'][0]
+                RAINNC = ncfile.variables['RAINNC'][0]
 	        SNOWNC = ncfile.variables['SNOWNC'][0]
 	        GRAUPELNC = ncfile.variables['GRAUPELNC'][0]
 	        HAILNC = ncfile.variables['HAILNC'][0]

@@ -241,15 +241,17 @@ def process_station(db, cur, station, ncfile, date):
                         # equations are borrowed from modelf.m
                         # it is unclear how exactly the pressure and delta_height are defined
                         # assuming pressure[z] = P[z][i0][j0] ('P' field from wrf output)
-                        if k <= 42:
+                        if k <= 41:
                             q1 = QVAPOR[k][i0][j0]   / ( QVAPOR[k][i0][j0]   + 1. )
                             q2 = QVAPOR[k+1][i0][j0] / ( QVAPOR[k+1][i0][j0] + 1. )
                             e_k   = ( P[k][i0][j0]   * q1 ) / ( 0.622 + ( 0.378 * q1 ))
                             e_kp1 = ( P[k+1][i0][j0] * q2 ) / ( 0.622 + ( 0.378 * q2 ))
                             ro_k   = e_k   / ( Rv * T[k][i0][j0]  )
                             ro_kp1 = e_kp1 / ( Rv * T[k+1][i0][j0]  )
-                            delta_height = 
-                            IWV = ( ro_k + ro_kp1) * delta_height / 2 
+                            h_k = (PH[k][i0][j0]+PHB[k][i0][j0])/9.8 		    
+			    h_kp1 = (PH[k+1][i0][j0]+PHB[k+1][i0][j0])/9.8
+			    delta_height = abs(h_k - h_kp1)
+                            IWV = (ro_k + ro_kp1) * delta_height / 2 
 
                         #3D data insert:
 			cur.execute ( "insert into NWP_IN_3D (Datetime, \
@@ -284,8 +286,17 @@ def process_station(db, cur, station, ncfile, date):
 				hgth,
 				QV,
 				k]) # insert or update
-
-		db.commit() 
+		                # Insert IWV into NWP_OUT table:
+                	cur.execute ( "insert into NWP_OUT (Datetime, \
+				SensorID, \
+				IWV )\
+        	       		values (%s, %s, %s) on duplicate key update\
+	                	Datetime = %s,\
+				SensorID = %s,\
+				IWV = %s", [date,
+				sensorId,
+               			IWV])
+		db.commit()
 		# commits all data to the specified -d <env>
 
 	except Exception as e:
@@ -319,6 +330,13 @@ def process_station_tro(station, ncfile, date):
 	        GRAUPELNC = ncfile.variables['GRAUPELNC'][0]
 	        HAILNC = ncfile.variables['HAILNC'][0]
 	        Precipitation = RAINNC + SNOWNC + GRAUPELNC + HAILNC
+	        # 3D fields:
+	        T = ncfile.variables['T'][0]
+	        P = ncfile.variables['P'][0]
+	        PB = ncfile.variables['PB'][0]
+	        PHB = ncfile.variables['PHB'][0]
+	        PH = ncfile.variables['PH'][0]
+	        QVAPOR = ncfile.variables['QVAPOR'][0]
 
 		# Import 1D fields
                 press = Pressure[i0][j0]/100.
@@ -328,7 +346,7 @@ def process_station_tro(station, ncfile, date):
                 pblh = PBLH[i0][j0]
                 temp = T2[i0][j0]-t_kelvin
                 rain = Precipitation[i0][j0]
-                print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
+                print('Inserting into TROPO Format. Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
                       .format(station['name'],
                               x0,
                               y0,
@@ -338,14 +356,65 @@ def process_station_tro(station, ncfile, date):
                               rain,
                               pblh,
                               zhd))
+                # 3D data insertion:
+		bottom_top = len(T)
+                # First, calculation of tk:
+		# Rd, Cp, Rd_Cp are used for 3D calculation of 
+		# tk (absolute temperature [K], and then 
+		# it's converted to [C]):
+                Rd  = 287.0
+		Cp  = 7.0 * Rd / 2.0
+		Rd_Cp  = Rd / Cp # dimensionless
+                Rv = 461.51
+                for k in range(0, bottom_top):
+			# [K]
+			theta = T[k][i0][j0] + 300.
+			# Press3D = Pair/100.0 [hPa]                        
+			# P is perturbation pressure; 
+			# PB is base state pressure
+			Pair = (P[k][i0][j0] + PB[k][i0][j0])/100.
+			# (... - t_kelvin) converts T to Celsius.
+                        # (100.*Pair) is again in [Pa], because
+			# in the formula for tk it should be [Pa].
+			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - t_kelvin
+			# QV is water vapour mixing ratio
+			QV = QVAPOR[k][i0][j0]
+                        #
+                    	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
+                        # IWV calculation
+                        # equations are borrowed from modelf.m
+                        # it is unclear how exactly the pressure and delta_height are defined
+                        # assuming pressure[z] = P[z][i0][j0] ('P' field from wrf output)
+                        if k <= 5:
+                            q1 = QVAPOR[k][i0][j0]   / ( QVAPOR[k][i0][j0]   + 1. )
+                            q2 = QVAPOR[k+1][i0][j0] / ( QVAPOR[k+1][i0][j0] + 1. )
+                            e_k   = ( P[k][i0][j0]   * q1 ) / ( 0.622 + ( 0.378 * q1 ))
+                            e_kp1 = ( P[k+1][i0][j0] * q2 ) / ( 0.622 + ( 0.378 * q2 ))
+                            ro_k   = e_k   / ( Rv * T[k][i0][j0]  )
+                            ro_kp1 = e_kp1 / ( Rv * T[k+1][i0][j0]  )
+                            h_k = (PH[k][i0][j0]+PHB[k][i0][j0])/9.8 		    
+			    h_kp1 = (PH[k+1][i0][j0]+PHB[k+1][i0][j0])/9.8
+			    delta_height = abs(h_kp1 - h_k)			     
+                            IWV = (ro_k + ro_kp1) * delta_height / 2 
+
 
 		# Create result as dictonary:
 		result = {
-			'station_name': station['name'],
-			'temp' : temp,
-			'press': press,
-			'rain' : rain,
-			'zhd'  : zhd
+			'station_name' : station['name'],
+			'temp'         : temp,
+			'press'        : press,
+			'rain'         : rain,
+			'zhd'          : zhd,
+			'q1'           : q1,
+			'q2'           : q2,
+			'e_k'          : e_k,
+			'e_kp1'        : e_kp1,
+			'ro_k'         : ro_k,
+			'ro_kp1'       : ro_kp1,
+			'h_k'          : h_k,
+			'h_kp1'        : h_kp1,
+			'delta_height' : delta_height,
+			'IWV'          : IWV
 			}
 
 	except Exception as e:
@@ -393,18 +462,28 @@ def tropo_out(station_data):
 \n\
 \n*--------------------------- \
 \n+TROP/SOLUTION \
-\n*STATION__ ____EPOCH___ TRODRY PRESS_ _TEMP _HUMI \
+\n*STATION__ ____EPOCH___ TRODRY PRESS_ _TEMP _HUMI _q1_ _q2_ _e_k_ e_kp1 _ro_k_ _ro_kp1 _h_k_ _h_kp1 _deltaH_ _IWV \
 ')
 			for station in station_data:
 				#print(	'{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f}'
-				troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f}'
+				troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f} {q1:>5.1f} {q2:>5.1f} {e_k:>5.1f} {e_kp1:>5.1f} {ro_k:>5.1f} {ro_kp1:>5.1f} {h_k:>5.1f} {h_kp1:>5.1f} {delta_height:>5.1f} {IWV:>5.1f}'
 					.format(
 					name=station['station_name'][:10],
 					epoch='YY:DDD:SSSSS',
 					trodry=station['zhd'],
 					press=station['press'], 
 					temp=station['temp']+t_kelvin, #should be converted to Kelvin
-					humi=0.0 #set to zero since is not provided
+					humi=0.0, #set to zero since is not provided
+					q1=station['q1'],
+					q2=station['q2'],
+					e_k=station['e_k'],
+					e_kp1=station['e_kp1'],
+					ro_k=station['ro_k'],
+					ro_kp1=station['ro_kp1'],
+					h_k=station['h_k'],
+					h_kp1=station['h_kp1'],
+					delta_height=station['delta_height'],
+					IWV=station['IWV']
 				))
 			#for station in station_data:
 			#	troposinex.write('station_name: {0}, temp: {1}, press: {2}, rain: {3}, zhd: {4}'.format(station['name'], temp, press, rain, zhd))

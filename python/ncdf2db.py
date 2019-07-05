@@ -380,16 +380,16 @@ def process_station_tro(station, ncfile, date):
 			# QV is water vapour mixing ratio
 			QV = QVAPOR[k][i0][j0]
                         #
-                    	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
+                    	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.81
                         # IWV calculation
                         # equations are borrowed from modelf.m
                         # it is unclear how exactly the pressure and delta_height are defined
                         # assuming pressure[z] = P[z][i0][j0] ('P' field from wrf output)
-                        if k <= 5:
+                        if k <= 2:
                             q1 = QVAPOR[k][i0][j0]   / ( QVAPOR[k][i0][j0]   + 1. )
                             q2 = QVAPOR[k+1][i0][j0] / ( QVAPOR[k+1][i0][j0] + 1. )
-                            e_k   = ( P[k][i0][j0]   * q1 ) / ( 0.622 + ( 0.378 * q1 ))
-                            e_kp1 = ( P[k+1][i0][j0] * q2 ) / ( 0.622 + ( 0.378 * q2 ))
+                            e_k   = ( ((P[k][i0][j0]+PB[k][i0][j0])/100.)   * q1 ) / ( 0.622 + ( 0.378 * q1 ))
+                            e_kp1 = ( ((P[k+1][i0][j0]+PB[k+1][i0][j0])/100.) * q2 ) / ( 0.622 + ( 0.378 * q2 ))
                             ro_k   = e_k   / ( Rv * T[k][i0][j0]  )
                             ro_kp1 = e_kp1 / ( Rv * T[k+1][i0][j0]  )
                             h_k = (PH[k][i0][j0]+PHB[k][i0][j0])/9.8 		    
@@ -414,7 +414,11 @@ def process_station_tro(station, ncfile, date):
 			'h_k'          : h_k,
 			'h_kp1'        : h_kp1,
 			'delta_height' : delta_height,
-			'IWV'          : IWV
+			'QV'           : QV,
+			'IWV'          : IWV,
+			'Pair'         : Pair,
+			'tk'           : tk,
+			'hgth'         : hgth
 			}
 
 	except Exception as e:
@@ -462,11 +466,11 @@ def tropo_out(station_data):
 \n\
 \n*--------------------------- \
 \n+TROP/SOLUTION \
-\n*STATION__ ____EPOCH___ TRODRY PRESS_ _TEMP _HUMI _q1_ _q2_ _e_k_ e_kp1 _ro_k_ _ro_kp1 _h_k_ _h_kp1 _deltaH_ _IWV \
+\n*STATION__ ____EPOCH___ TRODRY PRESS_ _TEMP_ _HUMI_ _q1_ _q2_ _e_k_ e_kp1_ _ro_k_ _ro_kp1_ _h_k_ _h_kp1 _deltaH_ _QV_ _IWV_ _Pair_ _tk_ _hgth_ \
 ')
 			for station in station_data:
 				#print(	'{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f}'
-				troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f} {q1:>5.1f} {q2:>5.1f} {e_k:>5.1f} {e_kp1:>5.1f} {ro_k:>5.1f} {ro_kp1:>5.1f} {h_k:>5.1f} {h_kp1:>5.1f} {delta_height:>5.1f} {IWV:>5.1f}'
+				troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f} {q1:>5.1e} {q2:>5.1e} {e_k:>5.1e} {e_kp1:>5.1e} {ro_k:>5.1e} {ro_kp1:>5.1e} {h_k:>5.1e} {h_kp1:>5.1e} {delta_height:>5.1f} {QV:>5.2e} {IWV:>5.2e} {Pair:>5.2e} {tk:>5.2e} {hgth:>5.2e}'
 					.format(
 					name=station['station_name'][:10],
 					epoch='YY:DDD:SSSSS',
@@ -483,7 +487,11 @@ def tropo_out(station_data):
 					h_k=station['h_k'],
 					h_kp1=station['h_kp1'],
 					delta_height=station['delta_height'],
-					IWV=station['IWV']
+					QV = station['QV'],
+					IWV=station['IWV'],
+					Pair=station['Pair'],
+					tk=station['tk'],
+					hgth=station['hgth']
 				))
 			#for station in station_data:
 			#	troposinex.write('station_name: {0}, temp: {1}, press: {2}, rain: {3}, zhd: {4}'.format(station['name'], temp, press, rain, zhd))

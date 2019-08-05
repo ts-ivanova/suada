@@ -557,11 +557,11 @@ def process_station_tro(station, ncfile, date):
 
 				IWV = IWV + ( ((ro_k+ro_kp1) / 2.)  * delta_height )
 
-		# Compute Zenith Wet Delay (ZWD) and Zenith Total Delay (ZTD)
-		# Tm = 70.2 + 0.72 * T2[i0][j0]
-		# k1 = (10**6) / ( Rv * ( ((3.766 * 10**5 /Tm) + 22. ) )
-		# ZWD = IWV / k1
-		# ZTD = ZHD + ZWD
+			# Compute Zenith Wet Delay (ZWD) and Zenith Total Delay (ZTD)
+			#Tm = 70.2 + 0.72 * T2[i0][j0]
+			#k1 = (10**6) / ( Rv * ( ((3.766 * 10**5 /Tm) + 22. ) )
+			#ZWD = IWV/k1
+			#ZTD = ZHD + ZWD
 
 		# Create result as dictonary:
 		result = {
@@ -765,10 +765,10 @@ def main(argv):
 	# Create the DB connection:
 	db = None
 	cur = None
-		try:
+	try:
 		if env == 'dev':
-		print('DB -> {}'.format(cfg.dev['db']))
-		db = MySQLdb.connect(host=cfg.dev['host'], \
+			print('DB -> {}'.format(cfg.dev['db']))
+			db = MySQLdb.connect(host=cfg.dev['host'], \
 				user=cfg.dev['user'], \
 				passwd=cfg.dev['passwd'], \
 				db=cfg.dev['db'])

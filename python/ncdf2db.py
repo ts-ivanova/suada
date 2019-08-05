@@ -132,9 +132,11 @@ def process_station(db, cur, station, ncfile, date):
 		j0 = station['j0']
 		print 'Station: ', station['name'], ' ID: ', station['id'], ' sensorId: ', sensorId
         	# 1D fields:
+		# T2 is temperature on 2m height, [K].
 	        T2 = ncfile.variables['T2'][0]
         	Pressure = ncfile.variables['PSFC'][0]
 	        PBLH = ncfile.variables['PBLH'][0]
+		# HGT is 1D height - above sea level [m].
 	        HGT = ncfile.variables['HGT'][0]
                 RAINNC = ncfile.variables['RAINNC'][0]
 	        SNOWNC = ncfile.variables['SNOWNC'][0]
@@ -142,18 +144,23 @@ def process_station(db, cur, station, ncfile, date):
 	        HAILNC = ncfile.variables['HAILNC'][0]
 	        Precipitation = RAINNC + SNOWNC + GRAUPELNC + HAILNC
 	        # 3D fields:
+		# T is temperature [K].
 	        T = ncfile.variables['T'][0]
+		# P is pressure [Pa].
 	        P = ncfile.variables['P'][0]
 	        PB = ncfile.variables['PB'][0]
+		# PHB is Base State Geopotential Height.
 	        PHB = ncfile.variables['PHB'][0]
+		# PH is Perturbation Geopotential Height [m].
 	        PH = ncfile.variables['PH'][0]
 	        QVAPOR = ncfile.variables['QVAPOR'][0]
 
 		# Import 1D fields
                 press = Pressure[i0][j0]/100.
                 heigth = HGT[i0][j0]
+		# Calculation of zenith hydrostatic delay (zhd):
                 zhd = (0.0022768*(float(press)))/(1.-0.00266*np.cos(2*(float(z0))*(3.1416/180.))-(0.00028*(float(heigth))/1000.))
-                # zhd = zenith hydrostatic delay
+                
                 pblh = PBLH[i0][j0]
                 temp = T2[i0][j0]-t_kelvin
                 rain = Precipitation[i0][j0]
@@ -234,22 +241,26 @@ def process_station(db, cur, station, ncfile, date):
 			# in the formula for tk it should be [Pa].
 			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - t_kelvin
 			# QV is water vapour mixing ratio
-			QV = QVAPOR[k][i0][j0]
+			QV = QVAPOR[k][i0][j0]*1000.
                         #
-                    	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.8
+                    	hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.81
                         # IWV calculation
                         # equations are borrowed from modelf.m
                         # it is unclear how exactly the pressure and delta_height are defined
                         # assuming pressure[z] = P[z][i0][j0] ('P' field from wrf output)
                         if k <= 41:
-                            q1 = QVAPOR[k][i0][j0]   / ( QVAPOR[k][i0][j0]   + 1. )
-                            q2 = QVAPOR[k+1][i0][j0] / ( QVAPOR[k+1][i0][j0] + 1. )
+			    # q1 and q2 aree specific humidity computed from mixing ratio
+			    # mixing ratio is g/kg thus QV
+                            q1 = QVAPOR[k][i0][j0]*1000.  / ( QVAPOR[k][i0][j0]*1000. + 1. )
+                            q2 = QVAPOR[k+1][i0][j0]*1000. / ( QVAPOR[k+1][i0][j0]*1000. + 1. )
+			    # e_k and e_kp1 is water vapour partial pressure with P in [Pa]
                             e_k   = ( P[k][i0][j0]   * q1 ) / ( 0.622 + ( 0.378 * q1 ))
                             e_kp1 = ( P[k+1][i0][j0] * q2 ) / ( 0.622 + ( 0.378 * q2 ))
+			    # water vapour density with T in [K]
                             ro_k   = e_k   / ( Rv * T[k][i0][j0]  )
                             ro_kp1 = e_kp1 / ( Rv * T[k+1][i0][j0]  )
-                            h_k = (PH[k][i0][j0]+PHB[k][i0][j0])/9.8 		    
-			    h_kp1 = (PH[k+1][i0][j0]+PHB[k+1][i0][j0])/9.8
+                            h_k = (PH[k][i0][j0]+PHB[k][i0][j0])/9.81 		    
+			    h_kp1 = (PH[k+1][i0][j0]+PHB[k+1][i0][j0])/9.81
 			    delta_height = abs(h_k - h_kp1)
                             IWV = (ro_k + ro_kp1) * delta_height / 2 
 
@@ -366,6 +377,7 @@ def process_station_tro(station, ncfile, date):
 		Cp  = 7.0 * Rd / 2.0
 		Rd_Cp  = Rd / Cp # dimensionless
                 Rv = 461.51
+		IWV = 0.
                 for k in range(0, bottom_top):
 			# [K]
 			theta = T[k][i0][j0] + 300.
@@ -385,7 +397,7 @@ def process_station_tro(station, ncfile, date):
                         # equations are borrowed from modelf.m
                         # it is unclear how exactly the pressure and delta_height are defined
                         # assuming pressure[z] = P[z][i0][j0] ('P' field from wrf output)
-                        if k <= 2:
+                        if k <= 41:
                             q1 = QVAPOR[k][i0][j0]   / ( QVAPOR[k][i0][j0]   + 1. )
                             q2 = QVAPOR[k+1][i0][j0] / ( QVAPOR[k+1][i0][j0] + 1. )
                             e_k   = ( ((P[k][i0][j0]+PB[k][i0][j0])/100.)   * q1 ) / ( 0.622 + ( 0.378 * q1 ))

@@ -124,6 +124,7 @@ def process_station(db, cur, station, ncfile, date):
 		stationName = station['name']
 		stationId = station['id']
 		sensorId = station['senid']
+                sourceId = station['source_id']
 		x0 = station['long']
 		y0 = station['latt']
 		z0 = station['alt']
@@ -302,14 +303,19 @@ def process_station(db, cur, station, ncfile, date):
 				k]) # insert or update
 			# Insert IWV into NWP_OUT table:
 			cur.execute ( "insert into NWP_OUT (Datetime, \
-				SensorID, \
+				StationID, \
+				SourceModID, \
 				IWV )\
-				values (%s, %s, %s) on duplicate key update\
+				values (%s, %s, %s, %s) on duplicate key update\
 				Datetime = %s,\
-				SensorID = %s,\
-				IWV = %s", [date,
-				sensorId,
-				IWV])
+				IWV = %s", [
+                                    date,
+				    stationId,
+                                    sourceId,
+				    IWV,
+                                    date,
+                                    IWV
+                                ])
 		db.commit()
 		# commits all data to the specified -d <env>
 
@@ -326,7 +332,7 @@ def process_station_tro(station, ncfile, date):
 	result = True
 	try:
 		stationName = station['name']
-		stationId = station['id']
+		stationdId = station['id']
 		sensorId = station['senid']
 		x0 = station['long']
 		y0 = station['latt']
@@ -843,6 +849,7 @@ def main(argv):
 			i0 = south_north / 2 + indx[1] - 1
 			station['i0'] = i0
 			station['j0'] = j0
+                        station['source_id'] = source_id
 
 
 			if (i0 >= 0 and i0 < south_north) and ( j0 >= 0 and j0 < west_east) and ( (country == 'All') or (country == station['country'])):

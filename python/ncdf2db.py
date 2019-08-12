@@ -133,31 +133,33 @@ def process_station(db, cur, station, ncfile, date):
 		print 'Station: ', station['name'], ' ID: ', station['id'], ' sensorId: ', sensorId
 		
 		# 1D FIELDS:
-		# T2 is temperature on 2m height, [K]:
+		# T2 [K] - temperature on 2m height:
 		T2 = ncfile.variables['T2'][0]
 		# Pressure, [Pa]:
 		Pressure = ncfile.variables['PSFC'][0]
+		# PBLH - 
 		PBLH = ncfile.variables['PBLH'][0]
-		# HGT is 1D height - above sea level, [m]:
+		# HGT, [m] - 1D height above sea level::
 		HGT = ncfile.variables['HGT'][0]
 		RAINNC = ncfile.variables['RAINNC'][0]
 		SNOWNC = ncfile.variables['SNOWNC'][0]
 		GRAUPELNC = ncfile.variables['GRAUPELNC'][0]
 		HAILNC = ncfile.variables['HAILNC'][0]
+		# Precipitation []:
 		Precipitation = RAINNC + SNOWNC + GRAUPELNC + HAILNC
 
 		# 3D FIELDS:
-		# T is temperature, [K]:
+		# T, [K] - temperature:
 		T = ncfile.variables['T'][0]
-		# P is perturbation pressure, [Pa]:
+		# P, [Pa] - perturbation pressure:
 		P = ncfile.variables['P'][0]
-		# PB is base state pressure:
+		# PB - base state pressure:
 		PB = ncfile.variables['PB'][0]
-		# PHB is Base State Geopotential Height, [m]:
+		# PHB [m] - Base State Geopotential Height:
 		PHB = ncfile.variables['PHB'][0]
-		# PH is Perturbation Geopotential Height, [m]:
+		# PH [m] - Perturbation Geopotential Height:
 		PH = ncfile.variables['PH'][0]
-		# QVAPOR - water vapour mixing ratio, [g/kg]:
+		# QVAPOR [g/kg] - water vapour mixing ratio:
 		QVAPOR = ncfile.variables['QVAPOR'][0]
 
 		# Import 1D fields
@@ -170,6 +172,7 @@ def process_station(db, cur, station, ncfile, date):
 		pblh = PBLH[i0][j0]
 		# temp, [C]:
 		temp = T2[i0][j0]-t_kelvin
+		# rain
 		rain = Precipitation[i0][j0]
 
 		print('Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
@@ -244,10 +247,11 @@ def process_station(db, cur, station, ncfile, date):
 			# (100.*Pair) is again in [Pa], because
 			# in the formula for tk it should be [Pa].
 			tk  = theta * (( 100.*Pair/100000. )**(Rd_Cp)) - t_kelvin
-			# QV is water vapour mixing ratio
+			# QV, [g/kg] - water vapour mixing ratio
 			QV = QVAPOR[k][i0][j0]*1000.
-			#
+			# Height, [m]: 
 			hgth = (PH[k][i0][j0] + PHB[k][i0][j0])/9.81
+			
 			# IWV calculation
 			# equations are borrowed from modelf.m
 			# it is unclear how exactly the pressure and delta_height are defined
@@ -508,11 +512,14 @@ def process_station_tro(station, ncfile, date):
 		# Import 1D fields
 		press = Pressure[i0][j0]/100.
 		heigth = HGT[i0][j0]
+		
+		# zhd, [m] - zenith hydrostatic delay
 		zhd = (0.0022768*(float(press)))/(1.-0.00266*np.cos(2*(float(z0))*(3.1416/180.))-(0.00028*(float(heigth))/1000.))
-		# zhd = zenith hydrostatic delay
+		
 		pblh = PBLH[i0][j0]
 		temp = T2[i0][j0]-t_kelvin
 		rain = Precipitation[i0][j0]
+	
 		print('Inserting into TROPO Format. Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
 			.format(station['name'],
 				x0,
@@ -533,19 +540,24 @@ def process_station_tro(station, ncfile, date):
 		Cp  = 7.0 * Rd / 2.0
 		Rd_Cp  = Rd / Cp # dimensionless
 		Rv = 461.51
+		# The following Tm and k1 are used for calculation of ZWD, ZTD later:
+		# Tm, [K] - weighted temperature mean:
+		Tm = 70.2 + 0.72 * T2[i0][j0]
+		k1 = (10**6) / ( Rv * ( ((3.766 * 10**5) /Tm) + 22. ) )
+
 		IWV = 0.
 		for k in range(0, bottom_top):
 			if k <= 41:
-				# compute specific humidity q1 and q2 from mixing ration QVAPOR*1000.  in [g/kg]
+				# Compute specific humidity q1 and q2 from mixing ratio QVAPOR*1000. in [g/kg]:
 				q1 =  QVAPOR[k][i0][j0] * 1000.  / ( (QVAPOR[k][i0][j0] * 1000.)   + 1. )
 				q2 =  QVAPOR[k+1][i0][j0] * 1000. / ( (QVAPOR[k+1][i0][j0] * 1000.) + 1. )
 
-				# compute water vapour partial pressure with model pressure = (P+PB)/100. in [hPa]
+				# Compute water vapour partial pressure with model pressure = (P+PB)/100. in [hPa]:
 				# PP = (P[k][i0][j0]+PB[k][i0][j0])
 				e_k   = ( ((P[k][i0][j0]+PB[k][i0][j0]) / 100.)   * q1 ) / ( 0.622 + ( 0.378 * q1 ))
 				e_kp1 = ( ((P[k+1][i0][j0]+PB[k+1][i0][j0]) / 100.) * q2 ) / ( 0.622 + ( 0.378 * q2 ))
 
-				# compute water vapour density with T [K]
+				# Compute water vapour density with T [K]
 				# T is perturbation potential temerature TT=T+300. Total Potential temperature [K]
 				# Model level temrature is computed TT = T * ( ((P+PB)/100000.) ^ (2/7)) [K]
 				# TT = (T[k][i0][j0] + 300.) * (( (P[k][i0][j0]+PB[k][i0][j0])/100000. )**(2./7.))
@@ -561,13 +573,12 @@ def process_station_tro(station, ncfile, date):
 				h_kp1 = (PH[k+1][i0][j0]+PHB[k+1][i0][j0])/9.81
 				delta_height = abs(h_kp1 - h_k)
 
+				# Integrated Water Vapour []:
 				IWV = IWV + ( ((ro_k+ro_kp1) / 2.)  * delta_height )
 
-			# Compute Zenith Wet Delay (ZWD) and Zenith Total Delay (ZTD)
-			#Tm = 70.2 + 0.72 * T2[i0][j0]
-			#k1 = (10**6) / ( Rv * ( ((3.766 * 10**5 /Tm) + 22. ) )
-			#ZWD = IWV/k1
-			#ZTD = ZHD + ZWD
+		# Compute Zenith Wet Delay (ZWD, [m]) and Zenith Total Delay (ZTD, [m]):
+		ZWD = IWV/(k1*100) # Divided by 100 to convert from [cm] to [m].
+		ZTD = zhd + ZWD
 
 		# Create result as dictonary:
 		result = {
@@ -587,7 +598,9 @@ def process_station_tro(station, ncfile, date):
 			'delta_height' : delta_height,
 			'IWV'          : IWV,
 			'TT'           : TT,
-			'PP'           : PP
+			'PP'           : PP,
+			'ZWD'          : ZWD,
+			'ZTD'          : ZTD
 			}
 
 	except Exception as e:
@@ -598,7 +611,7 @@ def process_station_tro(station, ncfile, date):
 
 
 # Define a procedure that exports the accumulated data
-# from process_station_tro() procedure  into
+# from the process_station_tro procedure  into
 # TROPOSINEX txt format:
 def tropo_out(station_data):
 	result = True
@@ -611,8 +624,8 @@ def tropo_out(station_data):
 \n+FILE/REFERENCE \
 \n*INFO_TYPE_____ \
 \nINFO_____ \
-\nDESCRIPTION	SUGAC \
-\nOUTPUT			SUGAC \
+\nDESCRIPTION		SUGAC \
+\nOUTPUT		SUGAC \
 \nCONTACT		GUEROVA \
 \nSOFTWARE		WRFv3.7.1 \
 \n-FILE/REFERENCE \
@@ -635,12 +648,12 @@ def tropo_out(station_data):
 \n\
 \n*--------------------------- \
 \n+TROP/SOLUTION \
-\n*STATION__ ____EPOCH___ TRODRY PRESS_ _TEMP_ HUMI deltaH IWV_ \
+\n*STATION__ ____EPOCH___ TRODRY PRESS_ _TEMP_ HUMI deltaH IWV_ _ZWD_ _ZTD_ \
 ')
 			for station in station_data:
 				#print(	'{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f}'
 				#troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f} {q1:>5.1e} {q2:>5.1e} {e_k:>5.1e} {e_kp1:>5.1e} {ro_k:>5.1e} {ro_kp1:>5.1e} {h_k:>5.1f} {h_kp1:>5.1f} {delta_height:>5.1f} {IWV:>5.1f} {ZWD:>5.1e} {TT:>5.1f} {PP:7.1f} '
-				troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f} {delta_height:>5.1f} {IWV:>5.1f} '
+				troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f} {delta_height:>5.1f} {IWV:>5.2f} {ZWD:>5.2f} {ZTD:>5.2f}'
 					.format(
 					name=station['station_name'][:10],
 					epoch='YY:DDD:SSSSS',
@@ -657,9 +670,9 @@ def tropo_out(station_data):
 					#h_k=station['h_k'],
 					#h_kp1=station['h_kp1'],
 					delta_height=station['delta_height'],
-					IWV=station['IWV']
-					#TT=station['TT'],
-					#PP=station['PP']
+					IWV=station['IWV'],
+					ZWD=station['ZWD'],
+					ZTD=station['ZTD']
 				))
 			#for station in station_data:
 			#	troposinex.write('station_name: {0}, temp: {1}, press: {2}, rain: {3}, zhd: {4}'.format(station['name'], temp, press, rain, zhd))

@@ -116,8 +116,17 @@ def get_station_name(cur, country):
 	finally:
 		return name
 
-# Define a procedure that inserts model data for each station
-# into the SUADA database:
+
+
+
+
+
+# Define a procedure process_station that inserts model data 
+# for each station into the SUADA database. It is very similar 
+# to the next procedure process_station_tro that accumulates data
+# for the troposinex txt format into a dictionary.
+# If you change one of these two procedures, 
+# you should also change the other accordingly.
 def process_station(db, cur, station, ncfile, date):
 	result = True
 	try:
@@ -160,7 +169,7 @@ def process_station(db, cur, station, ncfile, date):
 		PHB = ncfile.variables['PHB'][0]
 		# PH [m] - perturbation geopotential height:
 		PH = ncfile.variables['PH'][0]
-		# QVAPOR [g/kg] - water vapour mixing ratio:
+		# QVAPOR [kg/kg] - water vapour mixing ratio:
 		QVAPOR = ncfile.variables['QVAPOR'][0]
 
 		# Import 1D fields
@@ -243,7 +252,7 @@ def process_station(db, cur, station, ncfile, date):
 		# The following Tm and k1 are used for calculation of ZWD, ZTD later:
 		# Tm, [K] - weighted temperature mean:
 		Tm = 70.2 + 0.72 * T2[i0][j0]
-		k1 = (10**6) / ( Rv * ( ((3.766 * 10**5) /Tm) + 22. ) )
+		k1 = (10**6) / ( Rv*(((3.766 * 10**5)/Tm) + 22.) )
 
 		IWV = 0.
 		for k in range(0, bottom_top):
@@ -264,7 +273,7 @@ def process_station(db, cur, station, ncfile, date):
 			# (equations from modelf.m)
 			if k <= 41:
 				# Compute specific humidity q1 and q2 from mixing ratio QVAPOR*1000. in [g/kg]:
-				q1 =  (QVAPOR[k][i0][j0] * 1000.)  / ( (QVAPOR[k][i0][j0] * 1000.)   + 1. )
+				q1 =  (QVAPOR[k][i0][j0] * 1000.) / ( (QVAPOR[k][i0][j0] * 1000.) + 1. )
 				q2 =  (QVAPOR[k+1][i0][j0] * 1000.) / ( (QVAPOR[k+1][i0][j0] * 1000.) + 1. )
 
 				# Compute water vapour partial pressure with model pressure = (P+PB)/100. in [hPa]:
@@ -350,8 +359,15 @@ def process_station(db, cur, station, ncfile, date):
 
 
 
-# Define a procedure that accumulates data for each station
-# in a dictionary so that it can later be inserted into txt format:
+
+
+
+# Define a procedure process_station_tro that accumulates data 
+# for each station in a dictionary so that it can later be inserted 
+# into troposinex txt format. It is very similar to the previous 
+# procedure process_station that inserts data into the SUADA database.
+# If you change one of these two procedures, 
+# you should also change the other accordingly.
 def process_station_tro(station, ncfile, date):
 	result = True
 	try:
@@ -368,6 +384,8 @@ def process_station_tro(station, ncfile, date):
 		# 1D FIELDS (analogously to process_station for db):
 		# T2, [K]: temperature on 2m height:
 		T2 = ncfile.variables['T2'][0]
+		# Q2, [kg/kg] - specific humidity (will be inserted in tropo txt format):
+		Q2 = ncfile.variables['Q2'][0]
 		# Pressure, [Pa]:
 		Pressure = ncfile.variables['PSFC'][0]
 		# PBLH, [m] - planatary boundary layer height:
@@ -393,7 +411,7 @@ def process_station_tro(station, ncfile, date):
 		PHB = ncfile.variables['PHB'][0]
 		# PH, [m] - perturbation geopotential height:
 		PH = ncfile.variables['PH'][0]
-		# QVAPOR, [g/kg] - water vapour mixing ratio:
+		# QVAPOR, [kg/kg] - water vapour mixing ratio:
 		QVAPOR = ncfile.variables['QVAPOR'][0]
 
 		# Import 1D fields
@@ -401,7 +419,8 @@ def process_station_tro(station, ncfile, date):
 		press = Pressure[i0][j0]/100.
 		# height, [m]:
 		heigth = HGT[i0][j0]
-		
+		# Q2_humi, [g/kg]:
+		Q2_humi = Q2[i0][j0]*1000.
 		# Calculation of zhd, [m] - zenith hydrostatic delay
 		zhd = (0.0022768*(float(press)))/(1.-0.00266*np.cos(2*(float(z0))*(3.1416/180.))-(0.00028*(float(heigth))/1000.))
 		
@@ -412,7 +431,7 @@ def process_station_tro(station, ncfile, date):
 		# rain, [mm]:
 		rain = Precipitation[i0][j0]
 	
-		print('Inserting into TROPOSINEX txt format. Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}] '
+		print('Inserting into TROPOSINEX txt format. Name: {0} [{1}, {2}, {3}] -> [Temperarture [C]: {4}, Pressure [hPa]: {5}, Rain [mm]: {6}, PBL HEIGHT [m]: {7}, Zenit Heigth Delay [x]: {8}, Q2 [kg/kg]: {9}] '
 			.format(station['name'],
 				x0,
 				y0,
@@ -421,7 +440,8 @@ def process_station_tro(station, ncfile, date):
 				press,
 				rain,
 				pblh,
-				zhd))
+				zhd,
+				Q2_humi))
 
 		# 3D data insertion:
 		bottom_top = len(T)
@@ -436,13 +456,13 @@ def process_station_tro(station, ncfile, date):
 		# The following Tm and k1 are used for calculation of ZWD, ZTD later:
 		# Tm, [K] - weighted temperature mean:
 		Tm = 70.2 + 0.72 * T2[i0][j0]
-		k1 = (10**6) / ( Rv * ( ((3.766 * 10**5) /Tm) + 22. ) )
+		k1 = (10**6) / ( Rv*(((3.766 * 10**5)/Tm) + 22.) )
 
 		IWV = 0.
 		for k in range(0, bottom_top):
 			if k <= 41:
 				# Compute specific humidity q1 and q2 from mixing ratio QVAPOR*1000. in [g/kg]:
-				q1 =  (QVAPOR[k][i0][j0] * 1000.)  / ( (QVAPOR[k][i0][j0] * 1000.)   + 1. )
+				q1 =  (QVAPOR[k][i0][j0] * 1000.) / ( (QVAPOR[k][i0][j0] * 1000.) + 1. )
 				q2 =  (QVAPOR[k+1][i0][j0] * 1000.) / ( (QVAPOR[k+1][i0][j0] * 1000.) + 1. )
 
 				# Compute water vapour partial pressure with model pressure = (P+PB)/100. in [hPa]:
@@ -473,27 +493,24 @@ def process_station_tro(station, ncfile, date):
 		ZWD = IWV/(k1*100.) # Divided by 100 to convert from [cm] to [m].
 		ZTD = zhd + ZWD
 
+		# In the TROPOSINEX format, zhd, ZTD, ZWD are in [mm]. Therefore, *1000. :
+		zhd_mm = zhd*1000.
+		ZWD_mm = ZWD*1000.
+		ZTD_mm = ZTD*1000.
+
 		# Create result as a dictonary:
 		result = {
 			'station_name' : station['name'],
-			'temp'         : temp,
-			'press'        : press,
-			'rain'         : rain,
-			'zhd'          : zhd,
-			'q1'           : q1,
-			'q2'           : q2,
-			'e_k'          : e_k,
-			'e_kp1'        : e_kp1,
-			'ro_k'         : ro_k,
-			'ro_kp1'       : ro_kp1,
-			'h_k'          : h_k,
-			'h_kp1'        : h_kp1,
-			'delta_height' : delta_height,
 			'IWV'          : IWV,
-			'TT'           : TT,
-			'PP'           : PP,
-			'ZWD'          : ZWD,
-			'ZTD'          : ZTD
+			'press'        : press,
+			'Q2_humi'      : Q2_humi,
+			'temp'         : temp,
+			'Tm'           : Tm,
+			'zhd_mm'       : zhd_mm,
+			'ZTD_mm'       : ZTD_mm,
+			'ZWD_mm'       : ZWD_mm,
+			'q1'           : q1,
+			'q2'           : q2
 			}
 
 	except Exception as e:
@@ -503,9 +520,14 @@ def process_station_tro(station, ncfile, date):
 
 
 
+
+
+
 # Define a procedure that exports the accumulated data
-# from the process_station_tro procedure  into
+# from the process_station_tro procedure into
 # TROPOSINEX txt format:
+# ( SINEX_TRO - Solution INdependent EXchange format for
+# TROpospheric and meteorological parameters. )
 def tropo_out(station_data):
 	result = True
 	try:
@@ -541,23 +563,34 @@ def tropo_out(station_data):
 \n\
 \n*--------------------------- \
 \n+TROP/SOLUTION \
-\n*STATION__ ____EPOCH___ TRODRY PRESS_ _TEMP_ HUMI deltaH IWV_ _ZWD_ _ZTD_ \
+\n*STATION____ ____EPOCH____ IWV _PRESS_ _HUMSPC _TEMPDRY_ WMTEMP _TRODRY _TROTOT _TROWET \
 ')
+# FIELD NAMES:
+# Station = station name
+# Epoch   = timestamp YY:DDD:SSSSS
+# IWV     = Integrated water vapour, [kg/m^2]
+# PRESS   = Pressure, [Pa]
+# HUMSPC  = Specific humidity q, [g/kg]
+# TEMPDRY = Dry temperature temp, [K]
+# WMTEMP  = Weighted mean temperature Tm, [K]
+# TRODRY  = zhd_mm, [mm]
+# TROTOT  = ZTD_mm, [mm]
+# TROWET  = ZWD_mm, [mm]
 			for station in station_data:
 				#print(	'{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f}'
 				#troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f} {q1:>5.1e} {q2:>5.1e} {e_k:>5.1e} {e_kp1:>5.1e} {ro_k:>5.1e} {ro_kp1:>5.1e} {h_k:>5.1f} {h_kp1:>5.1f} {delta_height:>5.1f} {IWV:>5.1f} {ZWD:>5.1e} {TT:>5.1f} {PP:7.1f} '
-				troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f} {delta_height:>5.1f} {IWV:>5.2f} {ZWD:>5.2f} {ZTD:>5.2f}'
+				troposinex.write('\n{name:12s} {epoch:12s} {IWV:>5.2f} {press:>6.2f}    {humi_spc:>5.3f}    {temp:>5.1f} {Tm:>5.1f}    {TRODRY:>5.1f} {TROTOT:>5.1f} {TROWET:>5.1f}'
 					.format(
-					name=station['station_name'][:10],
-					epoch='YY:DDD:SSSSS',
-					trodry=station['zhd'],
-					press=station['press'],
-					temp=station['temp']+t_kelvin, #should be converted to Kelvin
-					humi=0.0, #set to zero since is not provided
-					delta_height=station['delta_height'],
-					IWV=station['IWV'],
-					ZWD=station['ZWD'],
-					ZTD=station['ZTD']
+					name     = station['station_name'][:10],
+					epoch    = 'YY:DDD:SSSSS',
+					IWV      = station['IWV'],
+					press    = station['press'],
+					humi_spc = station['Q2_humi'],
+					temp     = station['temp']+t_kelvin, #should be converted to Kelvin
+					Tm       = station['Tm'],
+					TRODRY   = station['zhd_mm'],
+					TROTOT   = station['ZTD_mm'],
+					TROWET   = station['ZWD_mm']
 				))
 			troposinex.write(' \n \
 \n-TROP/SOLUTION \

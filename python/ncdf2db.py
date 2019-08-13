@@ -387,7 +387,7 @@ def process_station_tro(station, ncfile, date):
 		T = ncfile.variables['T'][0]
 		# P, [Pa] - perturbation pressure:
 		P = ncfile.variables['P'][0]
-		# PB, [] - base state pressure
+		# PB, [Pa] - base state pressure
 		PB = ncfile.variables['PB'][0]
 		# PHB, [m] - base state geopotential height:
 		PHB = ncfile.variables['PHB'][0]
@@ -405,6 +405,7 @@ def process_station_tro(station, ncfile, date):
 		# Calculation of zhd, [m] - zenith hydrostatic delay
 		zhd = (0.0022768*(float(press)))/(1.-0.00266*np.cos(2*(float(z0))*(3.1416/180.))-(0.00028*(float(heigth))/1000.))
 		
+		# pblh, [m] - planatary boundary layer height:
 		pblh = PBLH[i0][j0]
 		# temp, [C]:
 		temp = T2[i0][j0]-t_kelvin

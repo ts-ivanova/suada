@@ -2,7 +2,7 @@
 # Tsvetelina Ivanova
 
 # Faculty of Physics, Sofia University "St. Kliment Ohridski"
-# 2017, 2018
+# 2017-2019
 
 # Aim of the python scripts in this project: to export the data from
 # the WRF model stored in netCDF format to a SUADA database
@@ -27,8 +27,9 @@ import numpy as np
 import wrf
 
 
-# Define global variables
+# Define global variables:
 t_kelvin = 273.15
+
 
 # Define a procedure that selects the stations'
 # ID, Name, Longitude, Latitude, Altitude
@@ -69,6 +70,7 @@ def getstations(cur, source_name, country, instrument_name):
 
 	return stations
 
+
 # Define a procedure that lists files containing data
 # in the selected by the user base directory and prefix:
 def listfiles(basedir, prefix):
@@ -79,6 +81,7 @@ def listfiles(basedir, prefix):
 	except Exception as e:
 		print('Exception reading basefolder {} {}'.format(basedir,e))
 	return files
+
 
 # Define a procedure that takes source_name as
 # an argument and returns source_id as a result, which is
@@ -95,6 +98,7 @@ def get_source_id(cur, source_name):
 		print('Error at get_source_id: {}'.format(e))
 	finally:
 		return source_id
+
 
 # Define a procedure that takes the country
 # (that the user specified when running the script)
@@ -119,12 +123,10 @@ def get_station_name(cur, country):
 
 
 
-
-
 # Define a procedure process_station that inserts model data 
-# for each station into the SUADA database. It is very similar 
-# to the next procedure process_station_tro that accumulates data
-# for the troposinex txt format into a dictionary.
+# for each station into the SUADA database. 
+# It is similar to the next procedure process_station_tro that 
+# accumulates data for the troposinex txt format into a dictionary.
 # If you change one of these two procedures, 
 # you should also change the other accordingly.
 def process_station(db, cur, station, ncfile, date):
@@ -249,7 +251,7 @@ def process_station(db, cur, station, ncfile, date):
 		Cp  = 7.0 * Rd / 2.0
 		Rd_Cp  = Rd / Cp # dimensionless
 		Rv = 461.51
-		# The following Tm and k1 are used for calculation of ZWD, ZTD later:
+		# The following Tm and k1 are used for calculation of ZWD and ZTD later:
 		# Tm, [K] - weighted temperature mean:
 		Tm = 70.2 + 0.72 * T2[i0][j0]
 		k1 = (10**6) / ( Rv*(((3.766 * 10**5)/Tm) + 22.) )
@@ -360,11 +362,9 @@ def process_station(db, cur, station, ncfile, date):
 
 
 
-
-
 # Define a procedure process_station_tro that accumulates data 
 # for each station in a dictionary so that it can later be inserted 
-# into troposinex txt format. It is very similar to the previous 
+# into troposinex txt format. It is similar to the previous 
 # procedure process_station that inserts data into the SUADA database.
 # If you change one of these two procedures, 
 # you should also change the other accordingly.
@@ -381,7 +381,7 @@ def process_station_tro(station, ncfile, date):
 		j0 = station['j0']
 		print 'Station: ', station['name'], ' ID: ', station['id'], ' sensorId: ', sensorId
 
-		# 1D FIELDS (analogously to process_station for db):
+		# 1D FIELDS:
 		# T2, [K]: temperature on 2m height:
 		T2 = ncfile.variables['T2'][0]
 		# Q2, [kg/kg] - specific humidity (will be inserted in tropo txt format):
@@ -501,6 +501,9 @@ def process_station_tro(station, ncfile, date):
 		# Create result as a dictonary:
 		result = {
 			'station_name' : station['name'],
+			'long'         : station['long'],
+			'latt'         : station['latt'],
+			'alt'          : station['alt'],
 			'IWV'          : IWV,
 			'press'        : press,
 			'Q2_humi'      : Q2_humi,
@@ -519,10 +522,6 @@ def process_station_tro(station, ncfile, date):
 		return result
 
 
-
-
-
-
 # Define a procedure that exports the accumulated data
 # from the process_station_tro procedure into
 # TROPOSINEX txt format:
@@ -535,33 +534,51 @@ def tropo_out(station_data):
 		with open('troposinex.txt', 'w') as troposinex:
 			troposinex.write('%=TRO \
 \n\
-\n*--------------------------- \
+\n*------------------------------------------------------------------ \
 \n+FILE/REFERENCE \
 \n*INFO_TYPE_____ \
-\nINFO_____ \
+\nINFO______________________________ \
 \nDESCRIPTION		SUGAC \
-\nOUTPUT		SUGAC \
-\nCONTACT		GUEROVA \
+\nOUTPUT			SUGAC \
+\nCONTACT			GUEROVA \
 \nSOFTWARE		WRFv3.7.1 \
+\nINPUT			NWM \
 \n-FILE/REFERENCE \
 \n\
-\n*--------------------------- \
+\n*------------------------------------------------------------------ \
 \n+TROP/DESCRIPTION \
-\n\
+\n*_____KEYWORD_______\
+\n__VALUE(S)________________\
+\nREFRACTIVITY COEFFICIENTS 	77.60 70.40 373900.0\
+\nTROPO SAMPLING INTERVAL 	3600\
+\nTIME SYSTEM 			UTC\
+\nTROPO PARAMETER NAMES		IWV PRESS HUMSPC TEMDRY WMTEMP TRODRY TROTOT TROWET\
+\nTROPO PARAMETER UNITS		1 1 1 1 1 1e+03 1e+03 1e+03\
+\nTROPO PARAMETER WIDTH		6 6 7 6 6 6 6 6 6\
 \n-TROP/DESCRIPTION \
 \n\
-\n*-------- \
+\n*------------------------------------------------------------------ \
 \n+SITE/ID \
-\n\
+\n*STATION___ _LONGITUDE _LATITUDE _ALTITUDE \
+')
+			for station in station_data:
+				troposinex.write('\n{name:12s}    {longit:>5.2f}    {latt:>5.2f}    {alt:>5.2f}'
+					.format(
+					name     = station['station_name'][:12],
+					longit   = station['long'],
+					latt     = station['latt'],
+					alt      = station['alt']
+				))
+			troposinex.write(' \n \
 \n-SITE/ID \
 \n\
-\n*--------------------------- \
+\n*------------------------------------------------------------------ \
 \n+SITE/COORDINATES \
 \n*STATION \
 \n\
 \n-SITE/COORDINATES \
 \n\
-\n*--------------------------- \
+\n*------------------------------------------------------------------ \
 \n+TROP/SOLUTION \
 \n*STATION____ ____EPOCH____ IWV _PRESS_ _HUMSPC _TEMPDRY_ WMTEMP _TRODRY _TROTOT _TROWET \
 ')
@@ -581,7 +598,7 @@ def tropo_out(station_data):
 				#troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f} {q1:>5.1e} {q2:>5.1e} {e_k:>5.1e} {e_kp1:>5.1e} {ro_k:>5.1e} {ro_kp1:>5.1e} {h_k:>5.1f} {h_kp1:>5.1f} {delta_height:>5.1f} {IWV:>5.1f} {ZWD:>5.1e} {TT:>5.1f} {PP:7.1f} '
 				troposinex.write('\n{name:12s} {epoch:12s} {IWV:>5.2f} {press:>6.2f}    {humi_spc:>5.3f}    {temp:>5.1f} {Tm:>5.1f}    {TRODRY:>5.1f} {TROTOT:>5.1f} {TROWET:>5.1f}'
 					.format(
-					name     = station['station_name'][:10],
+					name     = station['station_name'][:12],
 					epoch    = 'YY:DDD:SSSSS',
 					IWV      = station['IWV'],
 					press    = station['press'],
@@ -609,7 +626,7 @@ def tropo_out(station_data):
 
 
 # Define the main procedure that checks whether the command
-# that the user typed in the terminal is correct. Then it has to
+# that the user typed in the terminal is correct; then it has to
 # create a db connection; to fetch source_id by calling
 # the procedure get_source_id; then call the procedure
 # getstations that selects the stations' information
@@ -622,7 +639,7 @@ def tropo_out(station_data):
 # process_station_tro procedure is called.
 # The process_station procedure inserts the model data
 # into a SUADA database. The process_station_tro generates
-# a dictionary that will be exported to txt format.
+# a dictionary that will be exported to Troposinex txt format.
 
 def main(argv):
 	# Optional for the user to specify are the following

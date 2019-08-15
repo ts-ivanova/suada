@@ -559,10 +559,10 @@ def tropo_out(station_data):
 \n\
 \n*------------------------------------------------------------------ \
 \n+SITE/ID \
-\n*STATION___ _LONGITUDE _LATITUDE _ALTITUDE \
+\n*STATION__ _LONGITUDE_ _LATITUDE_ _HGT_MSL_ \
 ')
 			for station in station_data:
-				troposinex.write('\n{name:12s}    {longit:>5.2f}    {latt:>5.2f}    {alt:>5.2f}'
+				troposinex.write('\n{name:12s} {longit:>5.6f} {latt:>5.6f} {alt:>5.6f}'
 					.format(
 					name     = station['station_name'][:12],
 					longit   = station['long'],
@@ -580,7 +580,7 @@ def tropo_out(station_data):
 \n\
 \n*------------------------------------------------------------------ \
 \n+TROP/SOLUTION \
-\n*STATION____ ____EPOCH____ IWV _PRESS_ _HUMSPC _TEMPDRY_ WMTEMP _TRODRY _TROTOT _TROWET \
+\n*STATION__ ____EPOCH___ IWV PRESS HUMSPC TEMPDRY WMTEMP TRODRY TROTOT TROWET \
 ')
 # FIELD NAMES:
 # Station = station name
@@ -596,10 +596,10 @@ def tropo_out(station_data):
 			for station in station_data:
 				#print(	'{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f}'
 				#troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f} {q1:>5.1e} {q2:>5.1e} {e_k:>5.1e} {e_kp1:>5.1e} {ro_k:>5.1e} {ro_kp1:>5.1e} {h_k:>5.1f} {h_kp1:>5.1f} {delta_height:>5.1f} {IWV:>5.1f} {ZWD:>5.1e} {TT:>5.1f} {PP:7.1f} '
-				troposinex.write('\n{name:12s} {epoch:12s} {IWV:>5.2f} {press:>6.2f}    {humi_spc:>5.3f}    {temp:>5.1f} {Tm:>5.1f}    {TRODRY:>5.1f} {TROTOT:>5.1f} {TROWET:>5.1f}'
+				troposinex.write('\n {name:9s} {epoch:12s} {IWV:>5.2f} {press:>5.2f} {humi_spc:>5.3f} {temp:>5.1f} {Tm:>5.1f} {TRODRY:>5.1f} {TROTOT:>5.1f} {TROWET:>5.1f}'
 					.format(
-					name     = station['station_name'][:12],
-					epoch    = 'YY:DDD:SSSSS',
+					name     = station['station_name'][:9],
+					epoch    = 'YYYY:DDD:SSSSS',
 					IWV      = station['IWV'],
 					press    = station['press'],
 					humi_spc = station['Q2_humi'],

@@ -5,7 +5,7 @@ Outline:
 Section 1: Introduction to SUADA
 Section 2: Description of the ncdf2db.py script
 Section 3: MANUAL - Instructions for working on Physon
-Section 3: Examples of testing the script
+Section 4: Examples of testing the script
 
 
 
@@ -176,7 +176,7 @@ This way you will see all Names and Source IDs in this table and find yours.
 
 
 
-Section 3: Examples of testing the script
+Section 4: Examples of testing the script
 
 If you want to insert data into the SUADA database, you should type -o db.
 python python/ncdf2db.py -b data/ -s WRF_Martin_Experiment -d dev -o db

@@ -463,11 +463,6 @@ def process_station_tro(station, ncfile, date):
                 date_YYYY = date.timetuple().tm_year
                 date_DOY = date.timetuple().tm_yday
                 date_SSSSS = date.timetuple().tm_hour * 60 * 60
-		# Convert to strings:
-		YYYY_st = str(date_YYYY)
-		DOY_st = str(date_DOY)
-		SSSSS_st = str(date_SSSSS)
-
 		for k in range(0, bottom_top):
 			if k <= 41:
 				# Compute specific humidity q1 and q2 from mixing ratio QVAPOR*1000. in [g/kg]:
@@ -523,9 +518,9 @@ def process_station_tro(station, ncfile, date):
 			'ZWD_mm'       : ZWD_mm,
 			'q1'           : q1,
 			'q2'           : q2,
-			'YYYY_st'      : YYYY_st,
-			'DOY_st'       : DOY_st,
-			'SSSSS_st'     : SSSSS_st
+			'date_YYYY'    : date_YYYY,
+			'date_DOY'     : date_DOY,
+			'date_SSSSS'   : date_SSSSS
 			}
 
 	except Exception as e:
@@ -546,7 +541,7 @@ def tropo_out(station_data):
 		with open('troposinex.txt', 'w') as troposinex:
 			troposinex.write('%=TRO \
 \n\
-\n*---------------------------------------------------------------------------- \
+\n*------------------------------------------------------------------ \
 \n+FILE/REFERENCE \
 \n*INFO_TYPE_____ \
 \nINFO______________________________ \
@@ -557,7 +552,7 @@ def tropo_out(station_data):
 \nINPUT			NWM \
 \n-FILE/REFERENCE \
 \n\
-\n*---------------------------------------------------------------------------- \
+\n*------------------------------------------------------------------ \
 \n+TROP/DESCRIPTION \
 \n*_____KEYWORD_______\
 \n__VALUE(S)________________\
@@ -569,9 +564,9 @@ def tropo_out(station_data):
 \nTROPO PARAMETER WIDTH		6 6 7 6 6 6 6 6 6\
 \n-TROP/DESCRIPTION \
 \n\
-\n*---------------------------------------------------------------------------- \
+\n*------------------------------------------------------------------ \
 \n+SITE/ID \
-\n*STATION__ _LONGITUDE _LATITUDE_ _HGT_MSL_ \
+\n*STATION__ _LONGITUDE_ _LATITUDE_ _HGT_MSL_ \
 ')
 			for station in station_data:
 				troposinex.write('\n{name:12s} {longit:>5.6f} {latt:>5.6f} {alt:>5.6f}'
@@ -584,13 +579,13 @@ def tropo_out(station_data):
 			troposinex.write(' \n \
 \n-SITE/ID \
 \n\
-\n*---------------------------------------------------------------------------- \
+\n*------------------------------------------------------------------ \
 \n+SITE/COORDINATES \
 \n*STATION \
 \n\
 \n-SITE/COORDINATES \
 \n\
-\n*---------------------------------------------------------------------------- \
+\n*------------------------------------------------------------------ \
 \n+TROP/SOLUTION \
 \n*STATION__ ____EPOCH___ IWV PRESS HUMSPC TEMPDRY WMTEMP TRODRY TROTOT TROWET \
 ')
@@ -606,14 +601,16 @@ def tropo_out(station_data):
 # TROTOT  = ZTD_mm, [mm]
 # TROWET  = ZWD_mm, [mm]
 			for station in station_data:
-				troposinex.write('\n {name:9s} {epoch:12s} {IWV:>5.2f} {press:>5.2f} {humi_spc:>5.3f} {temp:>5.1f} {Tm:>5.1f} {TRODRY:>5.1f} {TROTOT:>5.1f} {TROWET:>5.1f}'
+				#print(	'{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f}'
+				#troposinex.write('\n{name:10s} {epoch:12s} {trodry:>6.1f} {press:>6.1f} {temp:>5.1f} {humi:>5.1f} {q1:>5.1e} {q2:>5.1e} {e_k:>5.1e} {e_kp1:>5.1e} {ro_k:>5.1e} {ro_kp1:>5.1e} {h_k:>5.1f} {h_kp1:>5.1f} {delta_height:>5.1f} {IWV:>5.1f} {ZWD:>5.1e} {TT:>5.1f} {PP:7.1f} '
+				troposinex.write('\n {name:9s} {epoch:>5f} {IWV:>5.2f} {press:>5.2f} {humi_spc:>5.3f} {temp:>5.1f} {Tm:>5.1f} {TRODRY:>5.1f} {TROTOT:>5.1f} {TROWET:>5.1f}'
 					.format(
 					name     = station['station_name'][:9],
-					epoch    = station['YYYY_st']+':'+station['DOY_st']+':'+station['SSSSS_st'],
+					epoch    = station['date_YYYY'],#':'station['date_DOY']':'station['date_SSSSS'],
 					IWV      = station['IWV'],
 					press    = station['press'],
 					humi_spc = station['Q2_humi'],
-					temp     = station['temp']+t_kelvin,
+					temp     = station['temp']+t_kelvin, #should be converted to Kelvin
 					Tm       = station['Tm'],
 					TRODRY   = station['zhd_mm'],
 					TROTOT   = station['ZTD_mm'],

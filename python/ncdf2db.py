@@ -463,10 +463,14 @@ def process_station_tro(station, ncfile, date):
                 date_YYYY = date.timetuple().tm_year
                 date_DOY = date.timetuple().tm_yday
                 date_SSSSS = date.timetuple().tm_hour * 60 * 60
+		date_HH = date.timetuple().tm_hour
+		date_MM = date.timetuple().tm_min
 		# Convert to strings:
 		YYYY_st = str(date_YYYY)
 		DOY_st = str(date_DOY)
 		SSSSS_st = str(date_SSSSS)
+		HH_st = str(date_HH)
+		MM_st = str(date_MM)
 
 		for k in range(0, bottom_top):
 			if k <= 41:
@@ -525,7 +529,9 @@ def process_station_tro(station, ncfile, date):
 			'q2'           : q2,
 			'YYYY_st'      : YYYY_st,
 			'DOY_st'       : DOY_st,
-			'SSSSS_st'     : SSSSS_st
+			'SSSSS_st'     : SSSSS_st,
+			'HH_st'        : HH_st,
+			'MM_st'        : MM_st
 			}
 
 	except Exception as e:
@@ -543,7 +549,15 @@ def tropo_out(station_data):
 	result = True
 	try:
 		# Insert values of parameters in txt format:
-		with open('troposinex.txt', 'w') as troposinex:
+		# Generating filename as required TROPOSINEX format:
+		for station in station_data:
+			YYYY_st = station['YYYY_st']
+			DOY_st = station['DOY_st']
+			HH_st = station['HH_st']
+			MM_st = station['MM_st']
+			filename = 'SUG1_UNK_UNK_'+YYYY_st+DOY_st+HH_st+MM_st+'_00U_00U.TRO'
+		# Inserting data into the TROPOSINEX format:
+		with open(filename, 'w') as troposinex:
 			troposinex.write('%=TRO \
 \n\
 \n*---------------------------------------------------------------------------- \
@@ -555,6 +569,7 @@ def tropo_out(station_data):
 \nCONTACT			GUEROVA \
 \nSOFTWARE		WRFv3.7.1 \
 \nINPUT			NWM \
+\nVERSION NUMBER		001 \
 \n-FILE/REFERENCE \
 \n\
 \n*---------------------------------------------------------------------------- \

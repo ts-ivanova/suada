@@ -467,10 +467,10 @@ def process_station_tro(station, ncfile, date):
 		date_MM = date.timetuple().tm_min
 		# Convert to strings:
 		YYYY_st = str(date_YYYY)
-		DOY_st = str(date_DOY)
-		SSSSS_st = str(date_SSSSS)
-		HH_st = str(date_HH)
-		MM_st = str(date_MM)
+		DOY_st = '{:03d}'.format(date_DOY)
+		SSSSS_st = '{:05d}'.format(date_SSSSS) #str(date_SSSSS)
+		HH_st = '{:02d}'.format(date_HH) #str(date_HH)
+		MM_st = '{:02d}'.format(date_MM) #str(date_MM)
 
 		for k in range(0, bottom_top):
 			if k <= 41:

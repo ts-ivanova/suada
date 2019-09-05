@@ -459,6 +459,10 @@ def process_station_tro(station, ncfile, date):
 		k1 = (10**6) / ( Rv*(((3.766 * 10**5)/Tm) + 22.) )
 
 		IWV = 0.
+                # Calculate date variables
+                date_YYYY = date.timetuple().tm_year
+                date_DOY = date.timetuple().tm_yday
+                date_SSSSS = date.timetuple().tm_hour * 60 * 60
 		for k in range(0, bottom_top):
 			if k <= 41:
 				# Compute specific humidity q1 and q2 from mixing ratio QVAPOR*1000. in [g/kg]:
